@@ -9,5 +9,6 @@ license = "MIT OR Apache-2.0"
 [workspace.dependencies]
 nbt = { path = "crates/nbt" }
 mcpe-world = { path = "crates/mcpe-world" }
+mcpe2java = { path = "crates/mcpe2java" }
 flate2 = "1.1"
 rusty-leveldb = { version = "4.0.2", default-features = false }
