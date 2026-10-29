@@ -5,7 +5,7 @@ status: hairy
 type: task
 priority: 3
 created: '2026-10-29T02:36:14Z'
-updated: '2026-10-29T11:54:38Z'
+updated: '2026-10-29T12:03:16Z'
 needs: agent
 ---
 
@@ -36,4 +36,4 @@ Where should the public share live, and may I push to it? Lean: GitHub Pages on 
 ---
 ▸ 2026-10-29T11:54:38Z [Joel Webber]
 
-Great idea, that's completely fine with me to host it on github.
+Totally fine hosting it on Github pages, but since we have a working web build, let's just host our own wasm binary with embedded world, rather than bothering with mcraft.fun. Let's convert this yak to reflect that.
