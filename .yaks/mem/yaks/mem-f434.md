@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-10-29T02:36:14Z'
-updated: '2026-10-29T17:39:16Z'
+updated: '2026-10-29T17:48:39Z'
 ---
 
 Publish the browser build of `memcraft-viewer` (world embedded in the wasm) on GitHub Pages for rocketsurgery-games/memcraft. Joel approved public hosting ("lock it down later if we have to") and chose our own build over mcraft.fun's `?map=` route.
@@ -68,3 +68,8 @@ Pushed to `origin/main` (`eb3babe..e5dbb17`), including the workflow. Enabling P
 Needs Joel: Settings → Pages → Source: **GitHub Actions**. Then re-run the `Pages` workflow (or push to `main`).
 
 Run `40923328146` (manual dispatch) is building now; the duplicate push run was cancelled.
+
+---
+▸ 2026-10-29T17:48:39Z [delta:Set up remote yak workflow]
+
+CI run `40923328146`: **build passed** (7m42s; wasm built, `wasm-opt` ran, artifact uploaded). **deploy failed** as expected while Pages is not enabled. One click in Settings → Pages (Source: GitHub Actions) and a re-run should publish it.
