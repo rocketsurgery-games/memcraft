@@ -51,6 +51,9 @@ fn level_dat_is_gzipped_java_nbt() {
     assert_eq!(data.get("Version").unwrap().get("Name").unwrap().as_str(), Some("1.12.2"));
     let pos = data.get("Player").unwrap().get("Pos").unwrap().as_list().unwrap();
     assert_eq!(pos.len(), 3);
+    // Spawn is the player's saved spot (eye y 66.99 -> feet 65).
+    let spawn: Vec<_> = ["SpawnX", "SpawnY", "SpawnZ"].map(|k| data.get(k).unwrap().as_i64().unwrap()).to_vec();
+    assert_eq!(spawn, [44, 65, 232]);
 }
 
 #[test]

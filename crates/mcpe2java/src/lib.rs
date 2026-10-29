@@ -84,13 +84,24 @@ pub fn convert(world: &World) -> JavaWorld {
     JavaWorld { files, report }
 }
 
+/// The local player's saved block position (feet), if recorded.
+fn player_feet(world: &World) -> Option<(i32, i32, i32)> {
+    let pos = world.players.get("~local_player")?.get("Pos")?.as_list()?;
+    let [x, y, z] = pos else { return None };
+    // PE stores the eye position, 1.62 above the feet.
+    Some((x.as_f64()?.floor() as i32, (y.as_f64()? - 1.62).round() as i32, z.as_f64()?.floor() as i32))
+}
+
 /// Builds Java `level.dat` (gzipped big-endian NBT) from the PE level and player.
 fn level_dat(world: &World) -> Vec<u8> {
     let level = &world.level;
     let int = |k: &str| level.get(k).and_then(Tag::as_i64).unwrap_or(0) as i32;
     let long = |k: &str| level.get(k).and_then(Tag::as_i64).unwrap_or(0);
     let game_type = int("GameType");
-    let (sx, sy, sz) = world.spawn();
+    // Spawn where the local player left off. Clients that join under another
+    // name (the browser client's default) ignore level.dat's Player and use
+    // the world spawn, so this is what returns you to where you were.
+    let (sx, sy, sz) = player_feet(world).unwrap_or_else(|| world.spawn());
 
     let mut data = vec![
         ("version", Tag::Int(19133)),
