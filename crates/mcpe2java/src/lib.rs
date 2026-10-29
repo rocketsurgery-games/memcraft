@@ -66,6 +66,16 @@ pub fn convert(world: &World) -> JavaWorld {
         report.chunks += 1;
     }
 
+    // Surround the world with empty region files. Readers on a read-only
+    // filesystem (e.g. the browser client opening a zip) fail on a missing
+    // region file, but treat an empty one as "no chunk here".
+    let occupied: Vec<(i32, i32)> = regions.keys().copied().collect();
+    for (rx, rz) in occupied {
+        for (dx, dz) in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
+            regions.entry((rx + dx, rz + dz)).or_default();
+        }
+    }
+
     let mut files = BTreeMap::new();
     for ((rx, rz), region) in regions {
         files.insert(format!("region/r.{rx}.{rz}.mca"), region.encode());

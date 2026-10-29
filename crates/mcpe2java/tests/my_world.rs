@@ -28,12 +28,16 @@ fn region_chunks(mca: &[u8]) -> Vec<Tag> {
 }
 
 #[test]
-fn produces_one_region_with_every_chunk() {
+fn produces_one_region_with_every_chunk_plus_empty_neighbours() {
     let java = converted();
-    let names: Vec<_> = java.files.keys().cloned().collect();
-    assert_eq!(names, ["level.dat", "region/r.0.0.mca"]);
+    let regions: Vec<_> = java.files.keys().filter(|k| k.starts_with("region/")).collect();
+    assert_eq!(regions.len(), 9);
+    assert!(java.files.contains_key("level.dat"));
     let chunks = region_chunks(&java.files["region/r.0.0.mca"]);
     assert_eq!(chunks.len(), 256);
+    let empty = &java.files["region/r.-1.0.mca"];
+    assert_eq!(empty.len(), 8192);
+    assert!(region_chunks(empty).is_empty());
 }
 
 #[test]
