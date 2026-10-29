@@ -18,6 +18,8 @@ wasm-bindgen --no-typescript --remove-name-section --remove-producers-section --
   target/wasm32-unknown-unknown/wasm-release/memcraft-viewer.wasm
 cp crates/memcraft-viewer/web/index.html "$out/"
 if command -v wasm-opt >/dev/null; then
-  wasm-opt -Oz -o "$out/memcraft-viewer_bg.wasm" "$out/memcraft-viewer_bg.wasm"
+  # Allow the post-MVP features rustc's wasm32 target emits by default.
+  wasm-opt -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals \
+    --enable-nontrapping-float-to-int --enable-reference-types --enable-multivalue -o "$out/memcraft-viewer_bg.wasm" "$out/memcraft-viewer_bg.wasm"
 fi
 ls -lh "$out"

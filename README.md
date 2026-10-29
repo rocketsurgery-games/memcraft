@@ -22,6 +22,14 @@ python3 -m http.server -d crates/memcraft-viewer/web/dist
 
 Controls: click to capture the mouse, WASD to move, Q/E for down/up, Shift to go fast, scroll to change speed. Blocks are drawn as flat colours because there are no textures yet. The browser build needs `rustup target add wasm32-unknown-unknown` and a `wasm-bindgen-cli` matching the version in `Cargo.lock`.
 
+On a fresh Debian/Ubuntu machine (e.g. a cloud runner), `sh scripts/runner-setup.sh` installs everything above, plus Playwright's Chromium for a headless smoke test of the browser build:
+
+```sh
+NODE_PATH=~/tools/drive/node_modules node crates/memcraft-viewer/web/drive.js crates/memcraft-viewer/web/dist out/shots
+```
+
+It reports whether a click takes the pointer lock and whether releasing it works, and screenshots the view before and after turning.
+
 ## Crates
 
 - `crates/nbt`: NBT reader/writer for both Bedrock (little-endian) and Java (big-endian).
