@@ -94,3 +94,85 @@ fn surface_is_sky_lit() {
     // A few air pockets are sealed inside builds.
     assert!(dark * 100 < lit, "{dark} dark vs {lit} lit air blocks");
 }
+
+fn all_entities(java: &mcpe2java::JavaWorld) -> Vec<Tag> {
+    region_chunks(&java.files["region/r.0.0.mca"])
+        .iter()
+        .flat_map(|c| c.get("Level").unwrap().get("Entities").unwrap().as_list().unwrap().to_vec())
+        .collect()
+}
+
+fn int(t: &Tag, k: &str) -> i64 {
+    t.get(k).unwrap().as_i64().unwrap()
+}
+
+/// Java (id, data) of a world block, read back from the region file.
+fn java_block(java: &mcpe2java::JavaWorld, x: i32, y: i32, z: i32) -> (u8, u8) {
+    let chunk = region_chunks(&java.files["region/r.0.0.mca"])
+        .into_iter()
+        .find(|c| {
+            let l = c.get("Level").unwrap();
+            int(l, "xPos") == (x >> 4) as i64 && int(l, "zPos") == (z >> 4) as i64
+        })
+        .unwrap();
+    let sections = chunk.get("Level").unwrap().get("Sections").unwrap().as_list().unwrap().to_vec();
+    let section = sections.iter().find(|s| int(s, "Y") == (y >> 4) as i64).unwrap();
+    let i = ((y & 15) * 256 + (z & 15) * 16 + (x & 15)) as usize;
+    let (Tag::ByteArray(ids), Tag::ByteArray(data)) = (section.get("Blocks").unwrap(), section.get("Data").unwrap()) else {
+        panic!()
+    };
+    (ids[i] as u8, (data[i / 2] as u8 >> ((i & 1) * 4)) & 15)
+}
+
+#[test]
+fn item_frames_become_entities_holding_their_items() {
+    let java = converted();
+    let frames: Vec<Tag> =
+        all_entities(&java).into_iter().filter(|e| e.get("id").unwrap().as_str() == Some("minecraft:item_frame")).collect();
+    assert_eq!(frames.len(), 9);
+    // All hang on the south face of an iron wall at z = 236.
+    for f in &frames {
+        assert_eq!((int(f, "Facing"), int(f, "TileZ")), (0, 237));
+    }
+    let item = |x: i64, y: i64| {
+        let f = frames.iter().find(|f| int(f, "TileX") == x && int(f, "TileY") == y).unwrap();
+        f.get("Item").cloned()
+    };
+    let armor = item(116, 71).unwrap();
+    assert_eq!(armor.get("id").unwrap().as_str(), Some("minecraft:diamond_horse_armor"));
+    assert_eq!(armor.get("tag").unwrap().get("display").unwrap().get("Name").unwrap().as_str(), Some("Special diamond horse armor"));
+    // PE enchantment 5 (thorns) is Java 7.
+    let boots = item(114, 71).unwrap();
+    assert_eq!(boots.get("id").unwrap().as_str(), Some("minecraft:iron_boots"));
+    let ench = boots.get("tag").unwrap().get("ench").unwrap().as_list().unwrap()[0].clone();
+    assert_eq!(int(&ench, "id"), 7);
+    // Leather horse armour has no Java 1.12 item: the frame stays, empty.
+    assert!(item(115, 70).is_none());
+}
+
+#[test]
+fn entities_are_converted() {
+    let java = converted();
+    let entities = all_entities(&java);
+    let count = |id: &str| entities.iter().filter(|e| e.get("id").unwrap().as_str() == Some(id)).count();
+    assert!(count("minecraft:sheep") > 0 && count("minecraft:chicken") > 0 && count("minecraft:minecart") > 0);
+    assert_eq!(java.report.skipped_entities.values().sum::<usize>(), 1);
+    // A painting's PE tile is the wall block (x = 9); Java's is the block in front.
+    let wasteland = entities.iter().find(|e| e.get("Motive").and_then(Tag::as_str) == Some("Wasteland")).unwrap();
+    assert_eq!([int(wasteland, "TileX"), int(wasteland, "TileY"), int(wasteland, "TileZ")], [10, 68, 106]);
+    assert_eq!(int(wasteland, "Facing"), 3);
+    for e in &entities {
+        assert_eq!(e.get("Pos").unwrap().as_list().unwrap().len(), 3);
+    }
+}
+
+#[test]
+fn extended_pistons_keep_their_heads() {
+    let java = converted();
+    // A sticky piston facing up (29:1), extended: base gets bit 8, sticky head 34:9.
+    assert_eq!(java_block(&java, 161, 68, 211), (29, 1 | 8));
+    assert_eq!(java_block(&java, 161, 69, 211), (34, 1 | 8));
+    // A retracted one is untouched.
+    assert_eq!(java_block(&java, 173, 66, 205), (29, 1));
+    assert!(java.report.skipped_block_entities.keys().all(|k| k == "NetherReactor"));
+}

@@ -15,7 +15,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::io::Write;
 use std::path::Path;
 
-use mcpe_world::{ChunkPos, World};
+use mcpe_world::{ChunkPos, Column, World, HEIGHT};
 use nbt::{compound, Endian, Tag};
 
 /// Java data version of 1.12.2.
@@ -26,9 +26,17 @@ const DATA_VERSION: i32 = 1343;
 pub struct Report {
     pub chunks: usize,
     pub block_entities: usize,
+    /// Entities written, including item frames (block entities in PE).
+    pub entities: usize,
     /// Block entity ids we did not convert, with counts.
     pub skipped_block_entities: BTreeMap<String, usize>,
+    /// PE entity types (low byte of `id`) we did not convert, with counts.
+    pub skipped_entities: BTreeMap<i64, usize>,
 }
+
+/// PE block entities whose state Java keeps in block data, so they are
+/// folded into the blocks rather than converted or reported as skipped.
+const FOLDED_BLOCK_ENTITIES: [&str; 2] = ["PistonArm", "Cauldron"];
 
 /// A converted world: relative path -> file contents.
 pub struct JavaWorld {
@@ -39,17 +47,31 @@ pub struct JavaWorld {
 pub fn convert(world: &World) -> JavaWorld {
     let mut report = Report::default();
 
-    let ids: HashMap<ChunkPos, Vec<u8>> = world
-        .columns
+    let mut columns = world.columns.clone();
+    extend_pistons(&mut columns);
+
+    let ids: HashMap<ChunkPos, Vec<u8>> = columns
         .iter()
         .map(|(pos, col)| (*pos, col.ids.iter().zip(&col.data).map(|(&i, &d)| blocks::to_java(i, d).0).collect()))
         .collect();
     let lit = light::light(&ids);
 
     let mut regions: BTreeMap<(i32, i32), anvil::Region> = BTreeMap::new();
-    for (pos, col) in &world.columns {
+    for (pos, col) in &columns {
         let mut block_entities = Vec::new();
+        let mut chunk_entities = Vec::new();
         for be in &col.block_entities {
+            let id = be.get("id").and_then(Tag::as_str).unwrap_or("?");
+            if FOLDED_BLOCK_ENTITIES.contains(&id) {
+                continue;
+            }
+            if id == "ItemFrame"
+                && let Some((199, data)) = block_at(&columns, be)
+            {
+                chunk_entities.push(entities::item_frame(be, data));
+                report.entities += 1;
+                continue;
+            }
             match entities::block_entity(be) {
                 Some(t) => {
                     block_entities.push(t);
@@ -61,7 +83,16 @@ pub fn convert(world: &World) -> JavaWorld {
                 }
             }
         }
-        let chunk = anvil::chunk(col, &lit[pos], block_entities, DATA_VERSION);
+        for e in &col.entities {
+            match entities::entity(e) {
+                Some(t) => {
+                    chunk_entities.push(t);
+                    report.entities += 1;
+                }
+                None => *report.skipped_entities.entry(entities::entity_kind(e).unwrap_or(-1)).or_default() += 1,
+            }
+        }
+        let chunk = anvil::chunk(col, &lit[pos], block_entities, chunk_entities, DATA_VERSION);
         regions.entry((pos.x.div_euclid(32), pos.z.div_euclid(32))).or_default().set(*pos, chunk);
         report.chunks += 1;
     }
@@ -82,6 +113,64 @@ pub fn convert(world: &World) -> JavaWorld {
     }
     files.insert("level.dat".into(), level_dat(world));
     JavaWorld { files, report }
+}
+
+/// The block (id, data) at a block entity's `x`/`y`/`z`.
+fn block_at(columns: &BTreeMap<ChunkPos, Column>, be: &Tag) -> Option<(u8, u8)> {
+    let [x, y, z] = ["x", "y", "z"].map(|k| be.get(k).and_then(Tag::as_i64).map(|v| v as i32));
+    let i = block_index(columns, x?, y?, z?)?;
+    let col = &columns[&i.0];
+    Some((col.ids[i.1], col.data[i.1]))
+}
+
+/// The column and array index of a world block position, if loaded.
+fn block_index(columns: &BTreeMap<ChunkPos, Column>, x: i32, y: i32, z: i32) -> Option<(ChunkPos, usize)> {
+    let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
+    if !(0..HEIGHT as i32).contains(&y) || !columns.contains_key(&pos) {
+        return None;
+    }
+    Some((pos, Column::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize)))
+}
+
+/// PE records an extended piston only in its `PistonArm` block entity
+/// (`State` 2), while Java marks it in block data: bit 8 on the base, and
+/// bit 8 on the head when the piston is sticky. Without these Java treats
+/// the head as stray and breaks it.
+fn extend_pistons(columns: &mut BTreeMap<ChunkPos, Column>) {
+    let arms: Vec<([i32; 3], bool)> = columns
+        .values()
+        .flat_map(|c| &c.block_entities)
+        .filter(|be| be.get("id").and_then(Tag::as_str) == Some("PistonArm"))
+        .filter(|be| be.get("State").and_then(Tag::as_i64) == Some(2))
+        .filter_map(|be| {
+            let p = ["x", "y", "z"].map(|k| be.get(k).and_then(Tag::as_i64).map(|v| v as i32));
+            Some(([p[0]?, p[1]?, p[2]?], be.get("Sticky").and_then(Tag::as_i64).unwrap_or(0) != 0))
+        })
+        .collect();
+    for ([x, y, z], sticky) in arms {
+        let Some((cpos, i)) = block_index(columns, x, y, z) else { continue };
+        let base = columns.get_mut(&cpos).unwrap();
+        if !matches!(base.ids[i], 29 | 33) {
+            continue;
+        }
+        base.data[i] |= 8;
+        // PE facings: down, up, south, north, east, west.
+        let [dx, dy, dz] = match base.data[i] & 7 {
+            0 => [0, -1, 0],
+            1 => [0, 1, 0],
+            2 => [0, 0, 1],
+            3 => [0, 0, -1],
+            4 => [1, 0, 0],
+            5 => [-1, 0, 0],
+            _ => continue,
+        };
+        let facing = base.data[i] & 7;
+        let Some((hpos, h)) = block_index(columns, x + dx, y + dy, z + dz) else { continue };
+        let head = columns.get_mut(&hpos).unwrap();
+        if head.ids[h] == 34 {
+            head.data[h] = facing | if sticky { 8 } else { 0 };
+        }
+    }
 }
 
 /// The local player's saved block position (feet), if recorded.

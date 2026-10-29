@@ -35,9 +35,18 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let r = &java.report;
-    println!("converted {:?}: {} chunks, {} block entities", world.name().unwrap_or("?"), r.chunks, r.block_entities);
+    println!(
+        "converted {:?}: {} chunks, {} block entities, {} entities",
+        world.name().unwrap_or("?"),
+        r.chunks,
+        r.block_entities,
+        r.entities
+    );
     if !r.skipped_block_entities.is_empty() {
         println!("skipped block entities: {:?}", r.skipped_block_entities);
+    }
+    if !r.skipped_entities.is_empty() {
+        println!("skipped entities (PE type: count): {:?}", r.skipped_entities);
     }
     println!("wrote {}", output.display());
     ExitCode::SUCCESS

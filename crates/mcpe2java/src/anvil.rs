@@ -23,7 +23,7 @@ fn pack_nibbles(src: impl Iterator<Item = u8>) -> Vec<i8> {
 }
 
 /// Builds the NBT of one Java chunk from a PE column and its computed light.
-pub fn chunk(col: &Column, lit: &Lit, tile_entities: Vec<Tag>, data_version: i32) -> Tag {
+pub fn chunk(col: &Column, lit: &Lit, tile_entities: Vec<Tag>, entities: Vec<Tag>, data_version: i32) -> Tag {
     // Java section arrays are indexed y*256 + z*16 + x; PE columns are x, z, y.
     let src = |x: usize, y: usize, z: usize| mcpe_world::Column::index(x, y, z);
     let order = |sy: usize| {
@@ -65,7 +65,7 @@ pub fn chunk(col: &Column, lit: &Lit, tile_entities: Vec<Tag>, data_version: i32
         ("Biomes", Tag::ByteArray(biomes(col))),
         ("HeightMap", Tag::IntArray(lit.height.to_vec())),
         ("Sections", Tag::List(10, sections)),
-        ("Entities", Tag::List(10, vec![])),
+        ("Entities", Tag::List(10, entities)),
         ("TileEntities", Tag::List(10, tile_entities)),
     ]);
     compound([("DataVersion", Tag::Int(data_version)), ("Level", level)])

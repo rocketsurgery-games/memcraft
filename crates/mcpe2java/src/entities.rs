@@ -1,8 +1,9 @@
-//! Block entity and player translation (PE 0.16 NBT -> Java 1.12 NBT).
+//! Block entity, entity and player translation (PE 0.16 NBT -> Java 1.12 NBT).
 //!
 //! Java 1.12 stores items with string ids, and PE item numbers match the
 //! classic Java numbering, so items are looked up by number in [`item_name`].
-//! Unknown items are dropped rather than guessed.
+//! Unknown items are dropped rather than guessed. Enchantments, which the
+//! two editions number differently, are renumbered by [`java_enchantment`].
 
 use nbt::{compound, Tag};
 
@@ -85,8 +86,246 @@ fn item_stack(item: &Tag, slot_key: &str, map_slot: impl Fn(i8) -> i8) -> Option
         out.push(("Slot", Tag::Byte(map_slot(slot as i8))));
     }
     if let Some(tag) = item.get("tag") {
-        out.push(("tag", tag.clone()));
+        out.push(("tag", item_tag(tag)));
     }
+    Some(compound(out))
+}
+
+/// An item's `tag` compound, with its enchantments renumbered (unknown ones
+/// dropped). Everything else (names, repair cost) has the same shape.
+fn item_tag(tag: &Tag) -> Tag {
+    let Tag::Compound(entries) = tag else { return tag.clone() };
+    let enchantment = |e: &Tag| -> Option<Tag> {
+        let id = java_enchantment(e.get("id")?.as_i64()?)?;
+        let lvl = e.get("lvl")?.as_i64()? as i16;
+        Some(compound([("id", Tag::Short(id)), ("lvl", Tag::Short(lvl))]))
+    };
+    Tag::Compound(
+        entries
+            .iter()
+            .map(|(k, v)| match (k.as_str(), v) {
+                ("ench", Tag::List(_, list)) => (k.clone(), Tag::List(10, list.iter().filter_map(enchantment).collect())),
+                _ => (k.clone(), v.clone()),
+            })
+            .collect(),
+    )
+}
+
+/// Java 1.12 enchantment id for a PE one. PE numbers them consecutively;
+/// Java leaves gaps between armour, weapon, tool and bow enchantments.
+pub fn java_enchantment(pe: i64) -> Option<i16> {
+    Some(match pe {
+        0 => 0,   // protection
+        1 => 1,   // fire protection
+        2 => 2,   // feather falling
+        3 => 3,   // blast protection
+        4 => 4,   // projectile protection
+        5 => 7,   // thorns
+        6 => 5,   // respiration
+        7 => 8,   // depth strider
+        8 => 6,   // aqua affinity
+        9 => 16,  // sharpness
+        10 => 17, // smite
+        11 => 18, // bane of arthropods
+        12 => 19, // knockback
+        13 => 20, // fire aspect
+        14 => 21, // looting
+        15 => 32, // efficiency
+        16 => 33, // silk touch
+        17 => 34, // unbreaking
+        18 => 35, // fortune
+        19 => 48, // power
+        20 => 49, // punch
+        21 => 50, // flame
+        22 => 51, // infinity
+        23 => 61, // luck of the sea
+        24 => 62, // lure
+        25 => 9,  // frost walker
+        26 => 70, // mending
+        _ => return None,
+    })
+}
+
+fn floats(t: &Tag, k: &str) -> Vec<f64> {
+    t.get(k).and_then(Tag::as_list).map(|l| l.iter().filter_map(Tag::as_f64).collect()).unwrap_or_default()
+}
+
+/// Fields every Java entity reads.
+fn base(java_id: &str, pos: &[f64], motion: &[f64], rotation: &[f64], on_ground: bool) -> Vec<(&'static str, Tag)> {
+    let doubles = |v: &[f64]| Tag::List(6, v.iter().map(|&f| Tag::Double(f)).collect());
+    vec![
+        ("id", Tag::String(java_id.into())),
+        ("Pos", doubles(pos)),
+        ("Motion", doubles(motion)),
+        ("Rotation", Tag::List(5, rotation.iter().map(|&f| Tag::Float(f as f32)).collect())),
+        ("OnGround", Tag::Byte(on_ground as i8)),
+        ("Air", Tag::Short(300)),
+        ("Fire", Tag::Short(-1)),
+    ]
+}
+
+/// Unit offset `(x, z)` of a Java horizontal facing (0 south, 1 west, 2 north, 3 east).
+fn facing_offset(facing: i8) -> (i32, i32) {
+    match facing & 3 {
+        0 => (0, 1),
+        1 => (-1, 0),
+        2 => (0, -1),
+        _ => (1, 0),
+    }
+}
+
+/// A Java hanging entity (item frame, painting). `tile` is the block it
+/// occupies and `facing` the way it faces, away from its wall. Java
+/// recomputes the exact position from these when it loads the entity.
+fn hanging(java_id: &str, tile: [i32; 3], facing: i8) -> Vec<(&'static str, Tag)> {
+    let (dx, dz) = facing_offset(facing);
+    let pos = [
+        tile[0] as f64 + 0.5 - dx as f64 * 0.46875,
+        tile[1] as f64 + 0.5,
+        tile[2] as f64 + 0.5 - dz as f64 * 0.46875,
+    ];
+    let mut out = base(java_id, &pos, &[0.0; 3], &[facing as f64 * 90.0, 0.0], false);
+    out.extend([
+        ("TileX", Tag::Int(tile[0])),
+        ("TileY", Tag::Int(tile[1])),
+        ("TileZ", Tag::Int(tile[2])),
+        ("Facing", Tag::Byte(facing)),
+    ]);
+    out
+}
+
+/// The Java item frame entity for a PE item frame block (id 199) with block
+/// data `data` and its `ItemFrame` block entity. The frame keeps its item
+/// unless the item has no Java 1.12 counterpart.
+pub fn item_frame(be: &Tag, data: u8) -> Tag {
+    // PE frame data 0..3 faces east/west/south/north.
+    let facing = [3, 1, 0, 2][(data & 3) as usize];
+    let tile = ["x", "y", "z"].map(|k| be.get(k).and_then(Tag::as_i64).unwrap_or(0) as i32);
+    let mut out = hanging("minecraft:item_frame", tile, facing);
+    if let Some(item) = be.get("Item").and_then(|i| item_stack(i, "__none", |s| s)) {
+        out.push(("Item", item));
+        out.push(("ItemRotation", Tag::Byte(be.get("ItemRotation").and_then(Tag::as_i64).unwrap_or(0) as i8 & 7)));
+        out.push(("ItemDropChance", Tag::Float(be.get("ItemDropChance").and_then(Tag::as_f64).unwrap_or(1.0) as f32)));
+    }
+    compound(out)
+}
+
+/// Java 1.12 ids of the PE entity types (the low byte of PE's `id`) that we
+/// convert. Projectiles, falling blocks, XP orbs and the like are dropped.
+pub fn entity_name(kind: i64) -> Option<&'static str> {
+    Some(match kind {
+        10 => "minecraft:chicken",
+        11 => "minecraft:cow",
+        12 => "minecraft:pig",
+        13 => "minecraft:sheep",
+        14 => "minecraft:wolf",
+        15 => "minecraft:villager",
+        16 => "minecraft:mooshroom",
+        17 => "minecraft:squid",
+        18 => "minecraft:rabbit",
+        19 => "minecraft:bat",
+        20 => "minecraft:villager_golem",
+        21 => "minecraft:snowman",
+        22 => "minecraft:ocelot",
+        23 => "minecraft:horse",
+        24 => "minecraft:donkey",
+        25 => "minecraft:mule",
+        26 => "minecraft:skeleton_horse",
+        27 => "minecraft:zombie_horse",
+        32 => "minecraft:zombie",
+        33 => "minecraft:creeper",
+        34 => "minecraft:skeleton",
+        35 => "minecraft:spider",
+        36 => "minecraft:zombie_pigman",
+        37 => "minecraft:slime",
+        38 => "minecraft:enderman",
+        39 => "minecraft:silverfish",
+        40 => "minecraft:cave_spider",
+        41 => "minecraft:ghast",
+        42 => "minecraft:magma_cube",
+        43 => "minecraft:blaze",
+        44 => "minecraft:zombie_villager",
+        45 => "minecraft:witch",
+        64 => "minecraft:item",
+        83 => "minecraft:painting",
+        84 => "minecraft:minecart",
+        90 => "minecraft:boat",
+        _ => return None,
+    })
+}
+
+/// The PE entity type: the low byte of `id` (newer saves set flag bits above it).
+pub fn entity_kind(e: &Tag) -> Option<i64> {
+    Some(e.get("id")?.as_i64()? & 0xff)
+}
+
+/// Converts one PE entity, or returns `None` for kinds we drop (and dropped
+/// items whose item has no Java counterpart).
+pub fn entity(e: &Tag) -> Option<Tag> {
+    let kind = entity_kind(e)?;
+    let name = entity_name(kind)?;
+    let pos = floats(e, "Pos");
+    if pos.len() != 3 {
+        return None;
+    }
+    let int = |k: &str| e.get(k).and_then(Tag::as_i64);
+    let on_ground = int("OnGround").unwrap_or(0) != 0;
+    let mut motion = floats(e, "Motion");
+    motion.resize(3, 0.0);
+    let mut rotation = floats(e, "Rotation");
+    rotation.resize(2, 0.0);
+
+    let out = match kind {
+        83 => {
+            // PE's tile is the wall block; Java's is the block in front of it.
+            let facing = int("Direction")? as i8 & 3;
+            let (dx, dz) = facing_offset(facing);
+            let tile = [int("TileX")? as i32 + dx, int("TileY")? as i32, int("TileZ")? as i32 + dz];
+            let mut out = hanging(name, tile, facing);
+            let motive = e.get("Motive").and_then(Tag::as_str).unwrap_or("Kebab");
+            out.push(("Motive", Tag::String(motive.into())));
+            out
+        }
+        64 => {
+            let mut out = base(name, &pos, &motion, &rotation, on_ground);
+            out.push(("Item", item_stack(e.get("Item")?, "__none", |s| s)?));
+            out.push(("Age", Tag::Short(int("Age").unwrap_or(0) as i16)));
+            out.push(("Health", Tag::Short(int("Health").unwrap_or(5) as i16)));
+            out.push(("PickupDelay", Tag::Short(0)));
+            out
+        }
+        84 | 90 => base(name, &pos, &motion, &rotation, on_ground),
+        _ => {
+            let mut out = base(name, &pos, &motion, &rotation, on_ground);
+            // Newer saves keep health among the attributes.
+            let health = e
+                .get("Attributes")
+                .and_then(Tag::as_list)
+                .into_iter()
+                .flatten()
+                .find(|a| a.get("Name").and_then(Tag::as_str).is_some_and(|n| n.ends_with("health")))
+                .and_then(|a| a.get("Current")?.as_f64())
+                .or_else(|| e.get("Health")?.as_f64());
+            if let Some(h) = health {
+                out.push(("Health", Tag::Float(h as f32)));
+            }
+            out.push(("PersistenceRequired", Tag::Byte(1)));
+            out.push(("Age", Tag::Int(if int("IsBaby").unwrap_or(0) != 0 { -24000 } else { 0 })));
+            if let Some(n) = e.get("CustomName").and_then(Tag::as_str).filter(|n| !n.is_empty()) {
+                out.push(("CustomName", Tag::String(n.into())));
+            }
+            match kind {
+                13 => {
+                    out.push(("Color", Tag::Byte(int("Color").unwrap_or(0) as i8)));
+                    out.push(("Sheared", Tag::Byte(int("Sheared").unwrap_or(0) as i8)));
+                }
+                22 => out.push(("CatType", Tag::Int(int("Variant").unwrap_or(0) as i32))),
+                23 => out.push(("Variant", Tag::Int(int("Variant").unwrap_or(0) as i32))),
+                _ => {}
+            }
+            out
+        }
+    };
     Some(compound(out))
 }
 
@@ -305,6 +544,10 @@ pub fn item_name(id: i16) -> Option<&'static str> {
         393 => "minecraft:baked_potato",
         400 => "minecraft:pumpkin_pie",
         406 => "minecraft:quartz",
+        // 416, PE's leather horse armour, only arrived in Java 1.14.
+        417 => "minecraft:iron_horse_armor",
+        418 => "minecraft:golden_horse_armor",
+        419 => "minecraft:diamond_horse_armor",
         420 => "minecraft:lead",
         421 => "minecraft:name_tag",
         _ => return None,

@@ -31,8 +31,11 @@ pub fn to_java(id: u8, data: u8) -> (u8, u8) {
         245 => (98, 0), // stonecutter -> stone bricks
         246 => (49, 0), // glowing obsidian -> obsidian
         247 => (42, 0), // nether reactor core -> iron block
-        // The item frame is a block in PE but an entity in Java; not yet converted.
+        // The item frame is a block in PE but an entity in Java (written from
+        // its block entity; see `entities::item_frame`).
         199 => (0, 0),
+        // Cauldron fill level: PE 0..=6, Java 0..=3.
+        118 => (118, data.min(6).div_ceil(2)),
         // Pistons: PE orders horizontal facings south/north/east/west where
         // Java uses north/south/west/east.
         29 | 33 | 34 => {
@@ -100,6 +103,13 @@ mod tests {
     fn fences_split_by_wood() {
         assert_eq!(to_java(85, 0), (85, 0));
         assert_eq!(to_java(85, 2), (189, 0));
+    }
+
+    #[test]
+    fn cauldron_level_halves() {
+        assert_eq!(to_java(118, 0), (118, 0));
+        assert_eq!(to_java(118, 3), (118, 2));
+        assert_eq!(to_java(118, 6), (118, 3));
     }
 
     #[test]
