@@ -2,11 +2,13 @@
 //!
 //! Runs natively (`cargo run -p memcraft-viewer --release`) or in the browser
 //! (see `web/build.sh`). Controls: click to capture the mouse (Esc releases
-//! it), WASD to move, Q/E down/up, Shift to go fast, scroll to change speed.
+//! it), WASD to move, Q/E down/up, Shift to go fast, scroll to change speed,
+//! F to switch between flying and walking (Space jumps).
 
 mod blocks;
 mod controls;
 mod mesh;
+mod physics;
 
 use std::collections::HashMap;
 
@@ -18,6 +20,7 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::prelude::*;
 use controls::{Controller, ControlsPlugin};
 use mcpe_world::{ChunkPos, World as PeWorld, HEIGHT};
+use physics::Solids;
 
 mod world_files {
     include!(concat!(env!("OUT_DIR"), "/world_files.rs"));
@@ -106,6 +109,7 @@ fn setup(
     mut images: ResMut<Assets<Image>>,
 ) {
     let world = load_world();
+    commands.insert_resource(Solids::from_world(&world));
     let heights = sky_heights(&world);
     let light = |x: i32, y: i32, z: i32| -> f32 {
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
@@ -156,7 +160,7 @@ fn setup(
 
     commands.spawn((
         Text::new(format!(
-            "{}\nclick to look around (Esc releases) - WASD move - Q/E down/up - Shift fast - scroll: speed",
+            "{}\nclick to look around (Esc releases) - WASD move - Q/E down/up - Shift fast - scroll: speed\nF: fly/walk (walk: Space jumps)",
             world.name().unwrap_or("MemCraft")
         )),
         TextFont { font_size: FontSize::Px(14.0), ..default() },
