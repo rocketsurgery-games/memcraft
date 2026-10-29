@@ -5,8 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-10-29T02:36:14Z'
-updated: '2026-10-29T17:21:06Z'
-needs: human
+updated: '2026-10-29T17:39:16Z'
 ---
 
 Publish the browser build of `memcraft-viewer` (world embedded in the wasm) on GitHub Pages for rocketsurgery-games/memcraft. Joel approved public hosting ("lock it down later if we have to") and chose our own build over mcraft.fun's `?map=` route.
@@ -48,3 +47,24 @@ Workflow written, not yet run: [`.github/workflows/pages.yml`](../.github/workfl
 - Not checked: the workflow on GitHub itself. It needs Pages enabled (Settings → Pages → Source: GitHub Actions) and the hosting question above answered, then a push to `main`.
 
 Still waiting on the ask; after that the remaining step is to land, push, and load the Pages URL.
+
+---
+▸ 2026-10-29T17:38:46Z [delta:Set up remote yak workflow]
+
+Yakherd recording Joel's answer from the Delta thread: "Ah, no worries. Just made it public." (option 1). He also said to push to origin/main freely.
+
+---
+▸ 2026-10-29T17:38:46Z [delta:Set up remote yak workflow]
+
+picked up
+
+Enabling Pages (build_type=workflow) via the API and running the workflow.
+
+---
+▸ 2026-10-29T17:39:16Z [delta:Set up remote yak workflow]
+
+Pushed to `origin/main` (`eb3babe..e5dbb17`), including the workflow. Enabling Pages through the API failed: `POST /repos/.../pages` returned `403 Resource not accessible by integration` (the agent token lacks that permission).
+
+Needs Joel: Settings → Pages → Source: **GitHub Actions**. Then re-run the `Pages` workflow (or push to `main`).
+
+Run `40923328146` (manual dispatch) is building now; the duplicate push run was cancelled.
