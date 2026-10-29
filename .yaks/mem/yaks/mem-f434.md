@@ -1,39 +1,18 @@
 ---
 id: mem-f434
-title: Host converted world for sharing (mcraft.fun ?map= link)
+title: Host memcraft-viewer web build on GitHub Pages
 status: hairy
 type: task
 priority: 3
 created: '2026-10-29T02:36:14Z'
-updated: '2026-10-29T12:03:16Z'
-needs: agent
+updated: '2026-10-29T12:08:48Z'
 ---
 
-`?map=<url>` needs a CORS-enabled zip URL. Options: GitHub release asset on rocketsurgery-games/memcraft (CORS ok via objects.githubusercontent? verify), GitHub Pages, or any static host. Note this makes the world public; decide with Joel. Could also self-host mcraft.fun's build next to the zip for a single stable link.
+Publish the browser build of `memcraft-viewer` (world embedded in the wasm) on GitHub Pages for rocketsurgery-games/memcraft. Joel approved public hosting ("lock it down later if we have to") and chose our own build over mcraft.fun's `?map=` route.
 
----
-▸ 2026-10-29T03:56:31Z [delta:Start investigation for yak mem-0908]
+## Work
 
-joelgwebber (Delta comment): public hosting is fine; lock down later if needed.
-
----
-▸ 2026-10-29T04:48:57Z [delta:Start investigation for yak mem-0908]
-
-Proposal (awaiting push authorization): publish both routes from one GitHub Pages site on rocketsurgery-games/memcraft. The repo is currently **private**, so Pages either needs a plan that allows Pages on private repos or a separate public repo.
-
-- `/` serves the memcraft-viewer web build.
-- `/my-world.zip` is the converted world, linked as `https://mcraft.fun/?map=<pages url>/my-world.zip` (Pages sends `Access-Control-Allow-Origin: *`).
-
-The deploy would be a `gh-pages` branch or a Pages workflow. Either way it means pushing to origin, which I haven't been authorized to do.
-
----
-▸ 2026-10-29T04:48:58Z [delta:Start investigation for yak mem-0908]
-
-asked: needs human
-
-Where should the public share live, and may I push to it? Lean: GitHub Pages on rocketsurgery-games/memcraft (needs the repo public or a Pages-capable plan), deployed from a gh-pages branch; alternatively a new public repo just for the site.
-
----
-▸ 2026-10-29T11:54:38Z [Joel Webber]
-
-Totally fine hosting it on Github pages, but since we have a working web build, let's just host our own wasm binary with embedded world, rather than bothering with mcraft.fun. Let's convert this yak to reflect that.
+- Add a Pages workflow: build with `crates/memcraft-viewer/web/build.sh` (needs the `wasm32-unknown-unknown` target and the `wasm-bindgen-cli` version from `Cargo.lock`), then upload `crates/memcraft-viewer/web/dist`.
+- The repo is currently private. Pages needs it public, or an org plan that allows Pages on private repos. Check before wiring the workflow.
+- Size: 26 MB wasm, 7.6 MB gzipped (Pages serves gzip). Consider `wasm-opt -Oz` in CI, since `build.sh` already runs it when present.
+- Verify by loading the Pages URL in a browser and flying around.
