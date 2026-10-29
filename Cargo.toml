@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+nbt = { path = "crates/nbt" }
+mcpe-world = { path = "crates/mcpe-world" }
+flate2 = "1.1"
+rusty-leveldb = { version = "4.0.2", default-features = false }

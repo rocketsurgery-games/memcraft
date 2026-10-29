@@ -1,0 +1,15 @@
+[package]
+name = "mcpe-world"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Reader for LevelDB-era Minecraft: Pocket Edition worlds (0.9 - 0.17)"
+
+[dependencies]
+nbt.workspace = true
+flate2.workspace = true
+rusty-leveldb.workspace = true
+
+# rusty-leveldb uses `rand` (skip lists); in the browser it needs JS randomness.
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
