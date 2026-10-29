@@ -12,3 +12,19 @@ mcpe-world = { path = "crates/mcpe-world" }
 mcpe2java = { path = "crates/mcpe2java" }
 flate2 = "1.1"
 rusty-leveldb = { version = "4.0.2", default-features = false }
+
+# Bevy is unusably slow unoptimized; optimize dependencies even in dev builds.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+# Small, shippable browser builds: `cargo build --profile wasm-release`.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

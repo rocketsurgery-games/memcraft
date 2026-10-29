@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MemCraft</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #87b8fa; overflow: hidden; }
+    #memcraft { display: block; width: 100%; height: 100%; outline: none; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; font: 16px system-ui, sans-serif; color: #234; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <canvas id="memcraft" tabindex="0"></canvas>
+  <div id="loading">Loading world…</div>
+  <script type="module">
+    import init from './memcraft-viewer.js';
+    // Bevy's event loop throws a control-flow "exception" once it takes over; it is not an error.
+    init().catch((e) => { if (!String(e).includes('Using exceptions for control flow')) throw e; });
+    // Hide the loading notice once Bevy has started drawing.
+    const hide = () => document.getElementById('loading').remove();
+    new MutationObserver((_, o) => { o.disconnect(); hide(); })
+      .observe(document.getElementById('memcraft'), { attributes: true });
+  </script>
+</body>
+</html>
