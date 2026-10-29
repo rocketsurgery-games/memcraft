@@ -14,6 +14,8 @@ Then either drag `out/my-world.zip` onto <https://mcraft.fun>, or host the zip a
 
 A Bevy app that reads the PE world directly; it runs natively or in the browser (WebGL2).
 
+The browser build of `main` is hosted at <https://rocketsurgery-games.github.io/memcraft/>; `.github/workflows/pages.yml` rebuilds it on every push.
+
 ```sh
 cargo run --release -p memcraft-viewer          # native window
 crates/memcraft-viewer/web/build.sh              # browser build -> crates/memcraft-viewer/web/dist

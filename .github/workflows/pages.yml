@@ -1,7 +1,7 @@
-# Builds the browser version of memcraft-viewer and publishes it on GitHub Pages.
-#
-# One-time repo setup: Settings -> Pages -> Source: "GitHub Actions".
-# (Pages needs a public repo, or an org plan that allows Pages on private ones.)
+# Builds the browser version of memcraft-viewer and publishes it on GitHub Pages
+# (https://rocketsurgery-games.github.io/memcraft/) by force-pushing the build
+# to the `gh-pages` branch, which Pages serves (Settings -> Pages -> Deploy from
+# a branch: gh-pages, / (root)). Only the latest build is kept on that branch.
 name: Pages
 
 on:
@@ -10,9 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -35,16 +33,12 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq binaryen
           wasm-bindgen --version && wasm-opt --version
       - run: sh crates/memcraft-viewer/web/build.sh
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: crates/memcraft-viewer/web/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish to gh-pages
+        working-directory: crates/memcraft-viewer/web/dist
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com \
+            commit -q -m "memcraft-viewer web build from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" gh-pages

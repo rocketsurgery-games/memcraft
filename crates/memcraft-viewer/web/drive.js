@@ -1,6 +1,6 @@
 // Drives the browser build headlessly and screenshots it, as a smoke test.
 //
-//   node crates/memcraft-viewer/web/drive.js <dist dir> <out dir>
+//   node crates/memcraft-viewer/web/drive.js <dist dir or URL> <out dir>
 //
 // Needs Playwright with Chromium (scripts/runner-setup.sh installs it in
 // ~/tools/drive; run with NODE_PATH=~/tools/drive/node_modules). Steps:
@@ -38,7 +38,8 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   const waitLock = (want) => page.waitForFunction(w => (document.pointerLockElement !== null) === w, want, { timeout: 20000 }).catch(() => {})
 
   const t0 = Date.now()
-  await page.goto(`http://localhost:${server.address().port}/`, { timeout: 120000 })
+  const url = /^https?:/.test(dir) ? dir : `http://localhost:${server.address().port}/`
+  await page.goto(url, { timeout: 120000 })
   await page.waitForFunction(() => !document.getElementById('loading'), null, { timeout: 180000 })
   await page.waitForTimeout(+(process.env.WAIT || 15000))
   console.log(`drawing after ${(Date.now() - t0) / 1000}s`)
