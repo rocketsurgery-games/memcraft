@@ -1,19 +1,20 @@
 //! Fly through an old Pocket Edition world.
 //!
 //! Runs natively (`cargo run -p memcraft-viewer --release`) or in the browser
-//! (see `web/build.sh`). Controls: mouse to look (click or M to capture),
-//! WASD to move, Q/E down/up, Shift to go fast, scroll to change speed.
+//! (see `web/build.sh`). Controls: click to capture the mouse (Esc releases
+//! it), WASD to move, Q/E down/up, Shift to go fast, scroll to change speed.
 
 mod blocks;
+mod controls;
 mod mesh;
 
 use std::collections::HashMap;
 
 use bevy::asset::RenderAssetUsages;
-use bevy::camera_controller::free_camera::{FreeCamera, FreeCameraPlugin};
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
+use controls::{Controller, ControlsPlugin};
 use mcpe_world::{ChunkPos, World as PeWorld, HEIGHT};
 
 mod world_files {
@@ -35,7 +36,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(FreeCameraPlugin)
+        .add_plugins(ControlsPlugin)
         .insert_resource(ClearColor(SKY))
         .add_systems(Startup, setup)
         .run();
@@ -118,13 +119,14 @@ fn setup(
     }
     info!("meshed {} columns, {quads} quads", world.columns.len());
 
+    let view = start_view(&world);
     commands.spawn((
         Camera3d::default(),
         // Colours are baked and final; tonemapping would only shift them
         // (and the default tonemapper needs LUTs we don't ship).
         Tonemapping::None,
-        start_view(&world),
-        FreeCamera { walk_speed: 8.0, run_speed: 30.0, sensitivity: 0.2, ..default() },
+        view,
+        Controller::new(&view, 8.0, 30.0),
         DistanceFog { color: SKY, falloff: FogFalloff::Linear { start: 160.0, end: 420.0 }, ..default() },
     ));
 
