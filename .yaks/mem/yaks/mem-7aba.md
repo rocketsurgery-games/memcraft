@@ -5,8 +5,8 @@ status: shaving
 type: task
 priority: 2
 created: '2026-10-29T11:59:27Z'
-updated: '2026-10-29T17:38:23Z'
-needs: human
+updated: '2026-10-29T17:56:36Z'
+needs: agent
 ---
 
 And make sure they get rendered. Let's find something as close as we can to the originals, while still being freely distributable.
@@ -73,3 +73,8 @@ I am proceeding with the lean in the meantime.
 ▸ 2026-10-29T17:38:23Z [tex-1]
 
 Incident: for the first ~40 min I ran `cd ~/memcraft` and edited/staged files in /home/user/memcraft (the yakherd's checkout) instead of my own clone /home/user/memcraft-3. Yakherd noticed; I moved the work via `git diff --cached --binary > ~/logs/tex-1.patch` + `git apply --index` in /home/user/memcraft-3 (296 files staged there, matches). Side effects left in /home/user/memcraft: staged changes (Cargo.lock, viewer Cargo.toml/build.rs/src/assets), a ref refs/wip/tex-1 (from `git stash create`), build artefacts under target/ and crates/memcraft-viewer/web/dist (gitignored), a killed in-flight wasm build. I did not reset or clean anything there. From now on I only use /home/user/memcraft-3.
+
+---
+▸ 2026-10-29T17:56:36Z [Joel Webber]
+
+That's ok. Let me know if there's anything you think we need in the yak skills or other places, to make this smoother in the future.
