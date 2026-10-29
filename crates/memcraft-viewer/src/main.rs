@@ -12,7 +12,9 @@ use std::collections::HashMap;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::core_pipeline::tonemapping::Tonemapping;
+use bevy::image::ImageSampler;
 use bevy::mesh::{Indices, PrimitiveTopology};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::prelude::*;
 use controls::{Controller, ControlsPlugin};
 use mcpe_world::{ChunkPos, World as PeWorld, HEIGHT};
@@ -57,6 +59,7 @@ fn to_bevy(m: mesh::MeshData) -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD)
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, m.positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, m.normals)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, m.uvs)
         .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, m.colors.into_iter().map(linear).collect::<Vec<_>>())
         .with_inserted_indices(Indices::U32(m.indices))
 }
@@ -82,10 +85,25 @@ fn sky_heights(world: &PeWorld) -> HashMap<ChunkPos, [i32; 256]> {
         .collect()
 }
 
+/// The embedded texture atlas, sampled without filtering to keep the pixels sharp.
+fn atlas_image() -> Image {
+    let size = Extent3d { width: blocks::atlas::WIDTH, height: blocks::atlas::HEIGHT, depth_or_array_layers: 1 };
+    let mut image = Image::new(
+        size,
+        TextureDimension::D2,
+        blocks::atlas::RGBA.to_vec(),
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    image.sampler = ImageSampler::nearest();
+    image
+}
+
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
 ) {
     let world = load_world();
     let heights = sky_heights(&world);
@@ -97,24 +115,30 @@ fn setup(
         }
     };
 
-    // Lighting is baked into vertex colours, so the materials are unlit.
-    let opaque = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, ..default() });
-    let translucent = materials.add(StandardMaterial {
-        base_color: Color::WHITE,
-        unlit: true,
-        alpha_mode: AlphaMode::Blend,
-        ..default()
-    });
+    // Lighting is baked into vertex colours (which multiply the texture), so
+    // the materials are unlit. They differ only in how texture alpha is used.
+    let atlas = images.add(atlas_image());
+    let mut material = |alpha_mode| {
+        materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(atlas.clone()),
+            unlit: true,
+            alpha_mode,
+            ..default()
+        })
+    };
+    let opaque = material(AlphaMode::Opaque);
+    let cutout = material(AlphaMode::Mask(0.5));
+    let translucent = material(AlphaMode::Blend);
 
     let mut quads = 0;
     for pos in world.columns.keys() {
         let m = mesh::mesh_column(&world, pos.x, pos.z, &light);
-        quads += (m.opaque.indices.len() + m.translucent.indices.len()) / 6;
-        if !m.opaque.is_empty() {
-            commands.spawn((Mesh3d(meshes.add(to_bevy(m.opaque))), MeshMaterial3d(opaque.clone())));
-        }
-        if !m.translucent.is_empty() {
-            commands.spawn((Mesh3d(meshes.add(to_bevy(m.translucent))), MeshMaterial3d(translucent.clone())));
+        for (pass, material) in [(m.opaque, &opaque), (m.cutout, &cutout), (m.translucent, &translucent)] {
+            quads += pass.indices.len() / 6;
+            if !pass.is_empty() {
+                commands.spawn((Mesh3d(meshes.add(to_bevy(pass))), MeshMaterial3d(material.clone())));
+            }
         }
     }
     info!("meshed {} columns, {quads} quads", world.columns.len());

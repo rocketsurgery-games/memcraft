@@ -33,6 +33,11 @@ bevy = { version = "0.19.1", default-features = false, features = [
     "default_font",
 ] }
 
+[build-dependencies]
+# Reads the texture PNGs at build time; the atlas is embedded as raw pixels, so
+# the viewer itself needs no PNG decoder.
+png = "0.18"
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # Bevy's wasm build needs JS randomness, too.
 getrandom = { version = "0.3", features = ["wasm_js"] }
