@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-10-29T12:01:49Z'
-updated: '2026-10-29T17:54:52Z'
+updated: '2026-10-29T18:29:25Z'
 ---
 
 This is a decent sized chunk of work, and the first crack at collision detection. So let's take the time to build it carefully, using existing bevy crates where helpful. Consider carefully whether it's worth doing "real" physics, or hacking something together the way the original MC did.
@@ -46,3 +46,7 @@ Decision: hand-rolled Minecraft-style AABB-vs-voxel sweep, not a physics crate. 
 - What it does NOT give: voxel colliders are full cubes only, so slabs/snow/carpet (`Shape::Partial`) would be solid cubes or non-solid; no "unloaded column = wall" (player walks off the edge and falls forever), and no auto step-up (MoveAndSlide slides only; step-up, ground detection and jump still hand-written, i.e. the whack-a-mole is only moved, not removed). Also a full solver pipeline (PhysicsPlugins, spatial-query BVH sync in FixedPostUpdate) runs for one kinematic body.
 - Why hand-rolled wins: the world already IS a grid; solidity is one lookup `blocks::look(id,data).shape`. Sweeping a 0.6x1.8x0.6 box one axis at a time (Y, X, Z, MC order) touches ~10-30 cells per call, can't tunnel at any speed, handles Partial heights exactly, and makes chunk-boundary behaviour trivial (one lookup function, no seams between colliders). Cost: 0 added dependencies, ~1 byte/block (4 MB RAM for 256 columns... see physics.rs `Solids`) and a few hundred lines + unit tests.
 - Would reconsider a crate if we later need dynamic bodies, mobs-vs-mobs, projectiles or non-axis-aligned shapes.
+
+![2-walk-landed](mem-f13a/2-walk-landed.png)
+
+![3-walk-moved](mem-f13a/3-walk-moved.png)

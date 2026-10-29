@@ -5,7 +5,7 @@ status: shorn
 type: task
 priority: 2
 created: '2026-10-29T11:59:27Z'
-updated: '2026-10-29T18:19:17Z'
+updated: '2026-10-29T18:33:55Z'
 ---
 
 And make sure they get rendered. Let's find something as close as we can to the originals, while still being freely distributable.
@@ -108,3 +108,10 @@ Landed (work by tex-1, finished/verified by yakherd). Pack: Pixel Perfection by 
 ▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
 
 moved: shaving -> shorn
+
+![after-tint](mem-7aba/after-tint.png)
+
+---
+▸ 2026-10-29T18:33:55Z [delta:Set up remote yak workflow]
+
+Follow-up: brighter grass/foliage tints (tex-1), landed; tests pass, clippy clean, live site verified textured.
