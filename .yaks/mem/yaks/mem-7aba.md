@@ -3,7 +3,7 @@ id: mem-7aba
 title: Add open-source textures
 status: shaving
 type: task
-priority: 3
+priority: 2
 created: '2026-10-29T11:59:27Z'
 updated: '2026-10-29T17:38:23Z'
 needs: human

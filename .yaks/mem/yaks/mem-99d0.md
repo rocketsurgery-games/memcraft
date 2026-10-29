@@ -3,7 +3,7 @@ id: mem-99d0
 title: Left-button mouse lock
 status: shorn
 type: bug
-priority: 3
+priority: 2
 created: '2026-10-29T11:58:44Z'
 updated: '2026-10-29T17:19:12Z'
 ---
