@@ -15,14 +15,15 @@ const TILE: usize = 16;
 /// Tiles per atlas row.
 const COLS: usize = 16;
 
-// Biome tints, fixed (the textures are greyscale where Minecraft tints them).
-const GRASS: [u8; 3] = [145, 189, 89];
-const FOLIAGE: [u8; 3] = [119, 171, 47];
-const SPRUCE: [u8; 3] = [97, 153, 97];
-const BIRCH: [u8; 3] = [128, 167, 85];
+// Biome tints, fixed. The textures are greyscale (and fairly dark) where
+// Minecraft tints them, so these multipliers may exceed one; results clamp.
+const GRASS: [f32; 3] = [0.77, 1.18, 0.49];
+const FOLIAGE: [f32; 3] = [0.52, 0.95, 0.30];
+const SPRUCE: [f32; 3] = [0.37, 0.67, 0.37];
+const BIRCH: [f32; 3] = [0.67, 1.04, 0.44];
 
 /// The tint baked into a texture, by file stem.
-fn tint(name: &str) -> Option<[u8; 3]> {
+fn tint(name: &str) -> Option<[f32; 3]> {
     Some(match name {
         "grass_block_top" | "grass_block_side" | "grass" | "fern" | "tall_grass_bottom" | "tall_grass_top"
         | "large_fern_bottom" | "large_fern_top" => GRASS,
@@ -55,10 +56,10 @@ fn load(path: &Path) -> Vec<u8> {
     rgba[..TILE * TILE * 4].to_vec()
 }
 
-fn multiply(pixels: &mut [u8], tint: [u8; 3]) {
+fn multiply(pixels: &mut [u8], tint: [f32; 3]) {
     for p in pixels.chunks_mut(4) {
         for (c, t) in p.iter_mut().zip(tint) {
-            *c = (*c as u32 * t as u32 / 255) as u8;
+            *c = (*c as f32 * t).round().min(255.0) as u8;
         }
     }
 }
