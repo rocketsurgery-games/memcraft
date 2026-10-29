@@ -1,12 +1,11 @@
 ---
 id: mem-7aba
 title: Add open-source textures
-status: shaving
+status: shorn
 type: task
 priority: 2
 created: '2026-10-29T11:59:27Z'
-updated: '2026-10-29T17:58:19Z'
-needs: agent
+updated: '2026-10-29T18:19:17Z'
 ---
 
 And make sure they get rendered. Let's find something as close as we can to the originals, while still being freely distributable.
@@ -78,3 +77,34 @@ Incident: for the first ~40 min I ran `cd ~/memcraft` and edited/staged files in
 ▸ 2026-10-29T17:56:36Z [Joel Webber]
 
 That's all fine with me. Let's just get something going for now, and we can clean up later if needed.
+
+---
+▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+
+picked up
+
+![before-flat-colours](mem-7aba/before-flat-colours.png)
+
+---
+▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+
+Before: flat vertex colours (main 311a5a2)
+
+![after-start](mem-7aba/after-start.png)
+
+---
+▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+
+After: textured atlas, headless Chromium (SwiftShader)
+
+![after-turned](mem-7aba/after-turned.png)
+
+---
+▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+
+Landed (work by tex-1, finished/verified by yakherd). Pack: Pixel Perfection by XSSheep, CC BY-SA 4.0 (Joel approved); license + ATTRIBUTION in crates/memcraft-viewer/assets. build.rs bakes a 16px atlas (biome tints baked in); per-face tiles; opaque/cutout(mask 0.5)/blend passes; leaves don't cull neighbours. Evidence: cargo test --workspace pass; clippy native + wasm32 clean; wasm 22.25->22.54 MB; drive.js on local dist: pointer lock states correct, 294,689->332,961 quads, screenshots attached.
+
+---
+▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+
+moved: shaving -> shorn
