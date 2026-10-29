@@ -1,0 +1,50 @@
+# Builds the browser version of memcraft-viewer and publishes it on GitHub Pages.
+#
+# One-time repo setup: Settings -> Pages -> Source: "GitHub Actions".
+# (Pages needs a public repo, or an org plan that allows Pages on private ones.)
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-bindgen-cli (the version in Cargo.lock) and wasm-opt
+        run: |
+          version=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p')
+          curl -sSfL "https://github.com/rustwasm/wasm-bindgen/releases/download/$version/wasm-bindgen-$version-x86_64-unknown-linux-musl.tar.gz" \
+            | tar -xz --strip-components=1 -C /usr/local/bin "wasm-bindgen-$version-x86_64-unknown-linux-musl/wasm-bindgen"
+          sudo apt-get update -qq && sudo apt-get install -y -qq binaryen
+          wasm-bindgen --version && wasm-opt --version
+      - run: sh crates/memcraft-viewer/web/build.sh
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: crates/memcraft-viewer/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
