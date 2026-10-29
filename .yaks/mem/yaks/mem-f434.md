@@ -5,9 +5,8 @@ status: hairy
 type: task
 priority: 3
 created: '2026-10-29T02:36:14Z'
-updated: '2026-10-29T04:48:58Z'
-parent: mem-0908
-needs: human
+updated: '2026-10-29T11:54:38Z'
+needs: agent
 ---
 
 `?map=<url>` needs a CORS-enabled zip URL. Options: GitHub release asset on rocketsurgery-games/memcraft (CORS ok via objects.githubusercontent? verify), GitHub Pages, or any static host. Note this makes the world public; decide with Joel. Could also self-host mcraft.fun's build next to the zip for a single stable link.
@@ -33,3 +32,8 @@ The deploy would be a `gh-pages` branch or a Pages workflow. Either way it means
 asked: needs human
 
 Where should the public share live, and may I push to it? Lean: GitHub Pages on rocketsurgery-games/memcraft (needs the repo public or a Pages-capable plan), deployed from a gh-pages branch; alternatively a new public repo just for the site.
+
+---
+▸ 2026-10-29T11:54:38Z [Joel Webber]
+
+Great idea, that's completely fine with me to host it on github.

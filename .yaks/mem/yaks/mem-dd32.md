@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-10-29T02:36:14Z'
-updated: '2026-10-29T03:56:32Z'
+updated: '2026-10-29T11:56:42Z'
 parent: mem-0908
 ---
 
@@ -20,3 +20,10 @@ joelgwebber (Delta comment): "let's try it" — look for a low-effort path to a 
 ▸ 2026-10-29T03:56:32Z [delta:Start investigation for yak mem-0908]
 
 moved: hairy -> shaving
+
+---
+▸ 2026-10-29T11:56:33Z [Joel Webber]
+
+Off to a great start! Native and web builds work beautifully out of the box.
+
+![mc-web](mem-dd32/mc-web.png)
