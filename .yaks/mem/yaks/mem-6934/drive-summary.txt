@@ -1,0 +1,8 @@
+locked before click: null
+locked after left click: memcraft
+edits after locking and looking: []
+edits after left click: ["[log] %cINFO%c crates/memcraft-viewer/src/targeting.rs:169%c broke (247, 0) at [44, 
+edits after right click: ["[log] %cINFO%c crates/memcraft-viewer/src/targeting.rs:169%c broke (247, 0) at [44,
+edits after second right click: ["[log] %cINFO%c crates/memcraft-viewer/src/targeting.rs:169%c broke (247, 0) 
+locked after exitPointerLock: null
+locked after clicking again: memcraft - edits made by that click: 0

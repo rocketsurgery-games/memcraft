@@ -1,11 +1,11 @@
 ---
 id: mem-12d5
 title: 'Block shapes: doors, trapdoors, gates, fences, panes, stairs, signs'
-status: shaving
+status: shorn
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T02:46:21Z'
+updated: '2026-11-01T03:05:58Z'
 parent: mem-f4c5
 ---
 
@@ -77,3 +77,40 @@ Evidence on the real sample world (temporary test, removed): of 39 closed doors 
 Baseline (base `8fc3164`, drive.js, no keys): `meshed 256 columns, 332961 quads in 1491.8 ms`, wasm 22580838 bytes.
 
 Decision: `lands_on_the_real_terrain_everywhere` now measures the ground height at the point the player drops onto (`ground()` in the test module) rather than the highest part of the block, since a stair's low step at that point is lower than its highest box. Same property, per point; rejected: skipping stairs and fences in that test.
+
+![before-stairs](mem-12d5/before-stairs.png)
+
+![after-stairs](mem-12d5/after-stairs.png)
+
+---
+▸ 2026-11-01T03:05:29Z [shape-1]
+
+Final checks 03:05Z: cargo test -p memcraft-viewer -> 'test result: ok. 41 passed; 0 failed' (TEST-EXIT 0); cargo clippy -p memcraft-viewer --all-targets -- -D warnings -> clean (exit 0); wasm clippy exit 0, web/build.sh exit 0. Quads 332,961 -> 366,856 (+33,895, half-slab/cube-ish blocks now boxes); wasm 22,580,838 -> 22,596,531 B (+15,693). Screenshots attached: before-stairs/after-stairs (same camera; nether-brick stairs now stair-shaped). Door/fence close-ups NOT captured: headless SwiftShader flight is frame-time dependent and my 2nd attempt ended under the terrain; doors/stairs verified by sample-world tests instead (39/39 doors axis match wall). Follow-ups: door/sign/lever textures in atlas (planks fallback now); pane edge texture; door halves' touching faces not culled; stairs don't connect fences; Partial could become Boxes.
+
+---
+▸ 2026-11-01T03:05:29Z [shape-1]
+kind: move
+from: shaving
+to: shorn
+---
+
+moved: shaving -> shorn
+
+---
+▸ 2026-11-01T03:05:32Z [shape-1]
+kind: checkpoint
+branch: wip/shape-1
+commit: 1e4501ac79f19aa4eec5b6d9ae99a64d431eb60b
+---
+
+checkpoint
+
+---
+▸ 2026-11-01T03:05:58Z [herd]
+kind: landed
+commit: 5de1f7d32103d705749cc032390923ed8dc32ea6
+source: 1e4501ac79f19aa4eec5b6d9ae99a64d431eb60b
+branch: main
+---
+
+landed: 5de1f7d mem-12d5: box shapes for doors, trapdoors, gates, fences, panes, stairs, signs; physics collides with them
