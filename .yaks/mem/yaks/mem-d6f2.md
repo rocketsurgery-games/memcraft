@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T15:44:11Z'
+updated: '2026-11-01T15:46:57Z'
 parent: mem-f5cf
 ---
 
@@ -51,3 +51,13 @@ to: shaving
 ---
 
 moved: hairy -> shaving
+
+---
+▸ 2026-11-01T15:44:51Z [delta:menu-1]
+
+Start Sun Nov  1 15:44:50 UTC 2026; checkout /home/user/memcraft-5 (git toplevel), base 48ed523
+
+---
+▸ 2026-11-01T15:46:57Z [delta:menu-1]
+
+Progress: menu.rs written (Bevy UI overlay open whenever pointer unlocked; Resume/Save(disabled, SaveAvailable+SaveRequested hook)/Controls), controls.rs gates keys with pointer_locked and grab_pointer ignores clicks on UI, hotbar gated, HUD help text moved into menu, README updated. Next: tests, clippy, web build, drive.

@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T15:44:07Z'
+updated: '2026-11-01T16:18:26Z'
 parent: mem-f4c5
 ---
 
@@ -56,3 +56,8 @@ Worker paint-2 start: Sun Nov  1 15:33:28 UTC 2026. yaks path: /home/user/.local
 ▸ 2026-11-01T15:44:07Z [delta:paint-2]
 
 Progress ($(date -u) approx): bundled world has 157 paintings (44 with plain id 83 plus 113 whose id has flag bits above the low byte, 4194387) and 9 item frames (block entity ItemFrame + block 199), holding armour boots and horse armour. Painting Pos is the slab centre, Direction 0..3 = +z,-x,-z,+x facing. Wrote src/entities.rs (decode, meshes, spawn system), build.rs embeds assets/paintings atlas, 28 PP textures added to assets/textures. Now compiling/testing.
+
+---
+▸ 2026-11-01T16:18:26Z [delta:paint-2]
+
+Progress: entities.rs done; `cargo test --workspace` all ok (incl. 2 new entities tests: 157 paintings + 9 item frames decoded on the bundled world, every painting's wall cells are non-air and its front cells are not opaque cubes, every frame has a block behind it, winding/orientation test); clippy native -D warnings clean; clippy wasm -D warnings clean. web/build.sh running; then headless screenshot.
