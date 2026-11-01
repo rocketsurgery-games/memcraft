@@ -3,8 +3,9 @@
 //!
 //! A ray from the camera (see [`cast`]) finds the block being looked at; it
 //! is outlined and marked by a crosshair. [`BREAK_BUTTON`] removes it,
-//! [`PLACE_BUTTON`] puts the hotbar's selected block against the face that
-//! was hit (see [`can_place`]). The buttons live in `controls`.
+//! [`PLACE_BUTTON`] uses the block if it reacts to a click (see
+//! [`interact`]) and otherwise puts the hotbar's selected block against the
+//! face that was hit (see [`can_place`]). The buttons live in `controls`.
 //!
 //! Every block is treated as a full cube here, whatever its shape.
 
@@ -14,6 +15,7 @@ use bevy::window::{CursorOptions, PrimaryWindow};
 use crate::blocks::{self, Shape};
 use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
+use crate::interact::interact;
 use crate::physics::{Solids, EYE_HEIGHT, HALF_WIDTH, HEIGHT_BLOCKS};
 use crate::world::{self, WorldMap};
 
@@ -149,7 +151,8 @@ fn can_place(existing: Block, block: Block, cell: IVec3, player: (Vec3, Vec3)) -
     !overlaps
 }
 
-/// Clicks: the left button breaks the targeted block, the right one places.
+/// Clicks: the left button breaks the targeted block, the right one uses it
+/// (a door opens, say) or, if it does nothing, places a block against it.
 fn edit_blocks(
     mouse: Res<ButtonInput<MouseButton>>,
     cursor: Single<&CursorOptions, With<PrimaryWindow>>,
@@ -169,6 +172,16 @@ fn edit_blocks(
             info!("broke {old:?} at {b}");
         }
     } else if mouse.just_pressed(PLACE_BUTTON) {
+        let b = hit.block;
+        let target = map.block(b.x, b.y, b.z);
+        if let Some(edits) = interact(target, b, |p| map.block(p.x, p.y, p.z)) {
+            for (p, (id, data)) in edits {
+                if world::set_block(&mut map, &mut solids, p.x, p.y, p.z, id, data) {
+                    info!("toggled {target:?} at {b}: {p} is now {:?}", (id, data));
+                }
+            }
+            return;
+        }
         let (transform, controller) = *camera;
         let (cell, Some(block)) = (hit.front(), hotbar.selected_block()) else {
             return;

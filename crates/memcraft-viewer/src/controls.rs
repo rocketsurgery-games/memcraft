@@ -223,7 +223,10 @@ mod tests {
     fn turning_keeps_the_start_facing_and_clamps_pitch() {
         let start = Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::new(1.0, -1.0, 2.0), Vec3::Y);
         let mut c = Controller::new(&start, 8.0, 30.0);
-        assert!(c.rotation().angle_between(start.rotation) < 1e-4, "a new controller must not snap the view");
+        // Compare directions, not `Quat::angle_between`: its `acos` near 1 is
+        // too coarse in f32 (it reports ~7e-4 for identical rotations on macOS).
+        let (got, want) = (c.rotation() * Vec3::NEG_Z, start.rotation * Vec3::NEG_Z);
+        assert!(got.distance(want) < 1e-4, "a new controller must not snap the view: {got} vs {want}");
 
         c.turn(Vec2::new(0.0, -1e6));
         assert_eq!(c.pitch, FRAC_PI_2);

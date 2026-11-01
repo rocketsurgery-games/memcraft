@@ -10,6 +10,7 @@ mod blocks;
 mod catalog;
 mod controls;
 mod hotbar;
+mod interact;
 mod mesh;
 mod physics;
 mod targeting;
