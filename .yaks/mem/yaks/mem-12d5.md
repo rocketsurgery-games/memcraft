@@ -5,7 +5,7 @@ status: shorn
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T03:05:58Z'
+updated: '2026-11-01T03:39:06Z'
 parent: mem-f4c5
 ---
 
@@ -114,3 +114,8 @@ branch: main
 ---
 
 landed: 5de1f7d mem-12d5: box shapes for doors, trapdoors, gates, fences, panes, stairs, signs; physics collides with them
+
+---
+▸ 2026-11-01T03:39:06Z [herd]
+
+Re-verified on main bd22126 (herd, Sun Nov  1 03:39:06 UTC 2026): workspace tests pass (viewer 55), clippy native+wasm clean, web build OK (wasm 22,678,402 B), drive.js pointer lock OK, 366,856 quads; drive-edit PITCH=0 KEYS=w1500 -> broke (247,0) at [44,66,225], placed at [44,66,225] and [44,66,226], re-lock click 0 edits. Pushed to origin/main.
