@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T16:25:13Z'
-updated: '2026-11-01T16:25:34Z'
+updated: '2026-11-01T16:25:50Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -44,3 +44,8 @@ to: shaving
 ---
 
 moved: hairy -> shaving
+
+---
+▸ 2026-11-01T16:25:50Z [delta:herd]
+
+Worker not started yet: disk 12 GB free with three Bevy workers at 12-13 GB each; delta:native-1 starts when door-2 or paint-2 lands and its target is deleted.
