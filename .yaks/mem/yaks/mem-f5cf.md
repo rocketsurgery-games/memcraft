@@ -5,8 +5,7 @@ status: hairy
 type: feature
 priority: 3
 created: '2026-10-31T23:21:32Z'
-updated: '2026-11-01T01:50:58Z'
-needs: agent
+updated: '2026-11-01T15:21:48Z'
 ---
 
 Initially, let's just focus on a manual save affordance in the menu (I guess we'll need a menu first!). Presumably we'd need some other serving mechanism to even be _able_ to save anything. We can explore that as well, but also preserve an "ephemeral" mode for read-only deployments with no server.
@@ -36,3 +35,15 @@ needs: agent
 2. That's good with me. I'm not worried about the download case -- this read-only mode only needs to exist as a simple fallback.
 3. Yup, that works.
 4. :thumbs-up:
+
+---
+▸ 2026-11-01T15:21:36Z [herd]
+kind: pickup
+---
+
+picked up
+
+---
+▸ 2026-11-01T15:21:48Z [herd]
+
+Answers recorded (herd): (1) write back into the PE LevelDB world (mem-a86b); (2) read-only Pages build: in-memory edits plus a simple download fallback, IndexedDB not needed; (3) axum server mem-a1f7 after writer and native save; (4) native load from a dir arg, save in place with backup. Unblocks mem-a86b.

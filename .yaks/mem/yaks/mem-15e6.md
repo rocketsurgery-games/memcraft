@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T03:40:06Z'
+updated: '2026-11-01T15:21:48Z'
 parent: mem-f4c5
 ---
 
@@ -41,3 +41,8 @@ to: shaving
 ---
 
 moved: hairy -> shaving
+
+---
+▸ 2026-11-01T15:21:48Z [herd]
+
+Runner was wiped again (~11h ago, found Sun Nov  1 15:21:48 UTC 2026); workers door-1/paint-1/sign-1 show no progress since 03:40Z and their runner checkouts are gone. Treating as dead pending Joel's go-ahead to respawn.

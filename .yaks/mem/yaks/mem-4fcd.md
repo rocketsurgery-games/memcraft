@@ -5,8 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:19:11Z'
-updated: '2026-11-01T02:00:57Z'
-needs: agent
+updated: '2026-11-01T15:21:48Z'
 ---
 
 We're not trying to reimplement minecraft game logic, just extend this viewer to allow for a simple creative-mode playground. To that end, we need the ability to remove and place blocks. Which also implies the ability to pick the current block. The most natural solution to this is to implement a very basic Minecraft-style toolbar, and a basic block/object search UI.
@@ -71,3 +70,15 @@ Worker threads (base `8fc3164`, default worker model):
 - `shape-1` (`mem-12d5`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpPgpIBxBArrcX3fBVIrK_YnmSnEPGN
 - `tgt-1` (`mem-6934`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpSnpIBxBArrcX3fBVIrK_YnmSnEPGN
 - `hot-1` (`mem-f4f7`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpWzZIBxBArrcX3fBVIrK_YnmSnEPGN
+
+---
+▸ 2026-11-01T15:21:36Z [herd]
+kind: pickup
+---
+
+picked up
+
+---
+▸ 2026-11-01T15:21:48Z [herd]
+
+Answers recorded (herd): hotbar stays on 1-9, no scroll-wheel selection (touchpads); left break / right place / middle pick-block; Bevy UI only; creative rules as proposed; orientation stays in mem-b3b2. Unblocks mem-d0e5 picker and mem-d6f2 menu.
