@@ -1,11 +1,11 @@
 ---
 id: mem-56d9
 title: 'Editable world: runtime block store and per-column remeshing'
-status: hairy
+status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:13Z'
-updated: '2026-11-01T01:16:13Z'
+updated: '2026-11-01T01:18:11Z'
 parent: mem-4fcd
 ---
 
@@ -25,3 +25,17 @@ Foundation for every editing, interaction and save feature. Today `setup` in `cr
 - Remesh time for one column logged (should be a few ms).
 
 Done by the yakherd as a prep commit, since every other yak in this family builds on its types.
+
+---
+▸ 2026-11-01T01:18:11Z [herd]
+kind: move
+from: hairy
+to: shaving
+---
+
+moved: hairy -> shaving
+
+---
+▸ 2026-11-01T01:18:11Z [herd]
+
+Claim: yakherd (`herd`), prep commit in the yakherd checkout. Scope: `main.rs` setup/meshing, a new `world.rs` resource, `physics.rs` `Solids` setter, `mesh.rs` only if its signature must change. Evidence: unit test, native + wasm build, drive.js quad count.
