@@ -4,10 +4,18 @@
 //
 // Needs Playwright with Chromium (scripts/runner-setup.sh installs it in
 // ~/tools/drive; run with NODE_PATH=~/tools/drive/node_modules). Steps:
-// load and wait for the first frame, screenshot `start.png`; left-click the
-// canvas and report whether the page holds the pointer lock; move the mouse
-// and screenshot `turned.png`; optionally hold keys from $KEYS, a JSON list
-// of [key, ms], and screenshot `moved.png`.
+// load and wait for the first frame (the menu is up: the pointer is free),
+// screenshot `start.png`; click the menu's Controls button (screenshot
+// `menu-controls.png`; the pointer must stay free) and click it again;
+// left-click the scene, off the menu, and report whether the page holds the
+// pointer lock; move the mouse and screenshot `turned.png`; optionally hold
+// keys from $KEYS, a JSON list of [key, ms], and screenshot `moved.png`.
+// Then release the lock as Esc does (the menu must come back, `menu-back.png`),
+// and click the menu's Resume button to lock again. No click may edit a block.
+//
+// The menu hangs 200 px down: the buttons are 260x40 with
+// 10 px gaps under a title, so Resume and Controls sit at fixed places in a
+// 1280x720 viewport (see start.png).
 const { chromium } = require('playwright')
 const http = require('http'), fs = require('fs'), path = require('path')
 const [dir, out] = process.argv.slice(2)
@@ -45,8 +53,16 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   console.log(`drawing after ${(Date.now() - t0) / 1000}s`)
   await shot('start.png')
 
+  const RESUME = [640, 268], CONTROLS = [640, 368], SCENE = [200, 360]
   console.log('locked before click:', await locked())
-  await page.mouse.click(640, 360, { button: 'left' })
+  await page.mouse.click(...CONTROLS, { button: 'left' })
+  await page.waitForTimeout(3000)
+  await shot('menu-controls.png')
+  console.log('locked after clicking Controls (must be null):', await locked())
+  await page.mouse.click(...CONTROLS, { button: 'left' })
+  await page.waitForTimeout(1000)
+  console.log('locked after clicking Controls again (must be null):', await locked())
+  await page.mouse.click(...SCENE, { button: 'left' })
   await waitLock(true)
   console.log('locked after left click:', await locked())
   // Turn right, with no button held.
@@ -63,13 +79,16 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   }
   await page.evaluate(() => document.exitPointerLock())
   await waitLock(false)
+  await page.waitForTimeout(3000)
+  await shot('menu-back.png')
   // A later frame must not re-take the lock without a new click.
   await page.waitForTimeout(3000)
   console.log('locked after exitPointerLock (what Esc does):', await locked())
   // The viewer must have noticed the release, or this click won't re-lock.
-  await page.mouse.click(640, 360, { button: 'left' })
+  await page.mouse.click(...RESUME, { button: 'left' })
   await waitLock(true)
-  console.log('locked after clicking again:', await locked())
+  console.log('locked after clicking Resume:', await locked())
+  console.log('block edits logged (must be 0):', logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
   printLogs()
   await browser.close(); server.close()
 })().catch(e => { console.error(String(e).split('\n')[0]); printLogs(); process.exit(1) })

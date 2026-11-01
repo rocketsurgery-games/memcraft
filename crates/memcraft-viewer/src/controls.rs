@@ -1,5 +1,6 @@
 //! Camera controls: click to lock the pointer and look around, Esc to
-//! release it; WASD/QE to fly, Shift to go fast, scroll to change speed.
+//! release it (which opens the `menu`); while it is free, none of the
+//! controls below act. WASD/QE to fly, Shift to go fast, scroll to change speed.
 //! F switches between flying and walking (gravity, solid blocks, Space to
 //! jump; see `physics`).
 //!
@@ -26,7 +27,10 @@ pub struct ControlsPlugin;
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Solids>()
-            .add_systems(Update, (grab_pointer, look, toggle_mode, scroll_speed, fly, walk).chain());
+            .add_systems(
+                Update,
+                (grab_pointer, (look, toggle_mode, scroll_speed, fly, walk).chain().run_if(pointer_locked)).chain(),
+            );
     }
 }
 
@@ -83,12 +87,19 @@ pub fn is_locked(cursor: &CursorOptions) -> bool {
     cursor.grab_mode != CursorGrabMode::None
 }
 
-fn set_locked(cursor: &mut CursorOptions, locked: bool) {
+/// Run condition for everything the player steers: only while the pointer is
+/// locked, i.e. while the menu is not up.
+pub fn pointer_locked(cursor: Single<&CursorOptions, With<PrimaryWindow>>) -> bool {
+    is_locked(&cursor)
+}
+
+pub fn set_locked(cursor: &mut CursorOptions, locked: bool) {
     cursor.grab_mode = if locked { CursorGrabMode::Locked } else { CursorGrabMode::None };
     cursor.visible = !locked;
 }
 
-/// A click of [`LOCK_BUTTON`] locks the pointer, and it stays locked until
+/// A click of [`LOCK_BUTTON`] locks the pointer (unless it is on a menu
+/// button, which does its own thing), and it stays locked until
 /// Esc or until the window loses focus. In the browser, Esc is handled by the
 /// browser itself (the page never sees it), so the lock is re-read from the
 /// page. The click that locks must not also act on a block: `targeting`
@@ -96,12 +107,14 @@ fn set_locked(cursor: &mut CursorOptions, locked: bool) {
 pub fn grab_pointer(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
+    buttons: Query<&Interaction, With<Button>>,
     mut window: Single<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
     #[cfg(target_arch = "wasm32")] mut browser_had_lock: Local<bool>,
 ) {
     let (window, cursor) = &mut *window;
     let locked = is_locked(cursor);
-    if !locked && window.focused && mouse.just_pressed(LOCK_BUTTON) {
+    let on_button = buttons.iter().any(|i| *i != Interaction::None);
+    if !locked && window.focused && !on_button && mouse.just_pressed(LOCK_BUTTON) {
         set_locked(cursor, true);
     } else if locked && (keys.just_pressed(KeyCode::Escape) || !window.focused) {
         set_locked(cursor, false);
@@ -123,10 +136,9 @@ pub fn grab_pointer(
 
 fn look(
     motion: Res<AccumulatedMouseMotion>,
-    cursor: Single<&CursorOptions, With<PrimaryWindow>>,
     mut camera: Single<(&mut Transform, &mut Controller)>,
 ) {
-    if !is_locked(&cursor) || motion.delta == Vec2::ZERO {
+    if motion.delta == Vec2::ZERO {
         return;
     }
     let (transform, controller) = &mut *camera;

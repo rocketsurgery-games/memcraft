@@ -1,12 +1,13 @@
 //! The hotbar: nine slots of blocks to place, one of them selected. The
 //! plugin owns the [`Hotbar`] resource, draws it along the bottom of the
-//! window, and lets the number keys 1-9 choose a slot.
+//! window, and lets the number keys 1-9 choose a slot (while the pointer is locked).
 
 use bevy::prelude::*;
 
 use crate::AtlasImage;
 use crate::blocks::{self, atlas};
 use crate::catalog;
+use crate::controls::pointer_locked;
 
 /// A placeable block: Pocket Edition `(id, data)`.
 pub type Block = (u8, u8);
@@ -65,7 +66,7 @@ impl Plugin for HotbarPlugin {
         app.init_resource::<Hotbar>()
             // After `Startup`, so the atlas `setup` inserts is there.
             .add_systems(PostStartup, spawn_ui)
-            .add_systems(Update, (select_by_key, refresh_slots, show_name).chain());
+            .add_systems(Update, (select_by_key.run_if(pointer_locked), refresh_slots, show_name).chain());
     }
 }
 
