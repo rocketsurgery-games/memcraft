@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T22:10:40Z'
+updated: '2026-11-01T22:30:29Z'
 parent: mem-f4c5
 ---
 
@@ -71,3 +71,8 @@ paint-2's worktree is unrecoverable (runner wiped; merge_worktrees: version does
 ▸ 2026-11-01T22:10:40Z [paint-3]
 
 paint-3 start: Sun Nov  1 22:10:40 UTC 2026. Checkout /home/user/memcraft-2, base main 0a53ca6. Rebuilding paint-2's work (lost).
+
+---
+▸ 2026-11-01T22:30:29Z [paint-3]
+
+Progress: rebuilt entities.rs, item_icons.rs, build.rs painting embed, PP painting+item textures (+sources/attribution/README). cargo test --workspace passes (157 paintings, 9 frames, 8 with icon). Checkpoint commit local. Now clippy + web build + Playwright.
