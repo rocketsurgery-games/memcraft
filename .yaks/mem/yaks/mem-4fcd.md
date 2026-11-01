@@ -1,11 +1,11 @@
 ---
 id: mem-4fcd
 title: Basic object placement and removal
-status: hairy
+status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:19:11Z'
-updated: '2026-11-01T01:17:10Z'
+updated: '2026-11-01T01:17:35Z'
 needs: human
 ---
 
@@ -26,3 +26,12 @@ Breakdown is in the child yaks; I'm doing the editable-world foundation (`mem-56
 3. **UI toolkit.** Bevy UI (one code path for native and browser, but text entry is basic) or an HTML overlay (nicer search box, browser only). Lean: Bevy UI.
 4. **Creative rules.** Instant break, no drops, unlimited blocks, any catalog block placeable, reach about 6 blocks walking and farther flying. Lean: yes.
 5. **Orientation.** Logs, stairs, slabs, torches, doors placed by facing are a separate yak (`mem-b3b2`, p4), so first-pass placement uses the catalog's data value as-is. Lean: fine for a first pass.
+
+---
+▸ 2026-11-01T01:17:35Z [herd]
+kind: move
+from: hairy
+to: shaving
+---
+
+moved: hairy -> shaving

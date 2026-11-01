@@ -1,11 +1,11 @@
 ---
 id: mem-8d69
 title: 'Block catalog: names and placeable variants'
-status: hairy
+status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:13Z'
-updated: '2026-11-01T01:16:13Z'
+updated: '2026-11-01T01:17:35Z'
 parent: mem-4fcd
 ---
 
@@ -23,3 +23,22 @@ Used by the hotbar (icons, names) and the block picker (search).
 
 - Test: every entry's `look` is not `Air` and names are unique.
 - A count by category in the summary note.
+
+---
+▸ 2026-11-01T01:17:35Z [herd]
+kind: move
+from: hairy
+to: shaving
+---
+
+moved: hairy -> shaving
+
+---
+▸ 2026-11-01T01:17:35Z [herd]
+
+Claim: worker `cat-1` (Delta subthread), base `1277a16`.
+
+- Scope: a new `crates/memcraft-viewer/src/catalog.rs` plus its `mod` line in `main.rs`. Read `blocks::look`; don't change it.
+- Out of scope: hotbar, picker, any UI.
+- Evidence: unit tests (every entry draws, unique names), category counts in the summary note.
+- Judge: yakherd at landing.
