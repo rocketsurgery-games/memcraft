@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T16:18:26Z'
+updated: '2026-11-01T22:09:39Z'
 parent: mem-f4c5
 ---
 
@@ -61,3 +61,8 @@ Progress ($(date -u) approx): bundled world has 157 paintings (44 with plain id 
 ▸ 2026-11-01T16:18:26Z [delta:paint-2]
 
 Progress: entities.rs done; `cargo test --workspace` all ok (incl. 2 new entities tests: 157 paintings + 9 item frames decoded on the bundled world, every painting's wall cells are non-air and its front cells are not opaque cubes, every frame has a block behind it, winding/orientation test); clippy native -D warnings clean; clippy wasm -D warnings clean. web/build.sh running; then headless screenshot.
+
+---
+▸ 2026-11-01T22:09:39Z [herd-memcraft]
+
+paint-2's worktree is unrecoverable (runner wiped; merge_worktrees: version does not reach its origin). Respawning as paint-3 from main 0a53ca6. paint-2 had reached: entities.rs, assets/paintings/, item textures, 157 paintings + 9 item frames drawn.
