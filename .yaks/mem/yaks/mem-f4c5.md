@@ -5,8 +5,8 @@ status: hairy
 type: feature
 priority: 3
 created: '2026-10-31T23:23:03Z'
-updated: '2026-11-01T01:17:10Z'
-needs: human
+updated: '2026-11-01T01:24:04Z'
+needs: agent
 ---
 
 Some starting points (I'm sure we need more than this):
@@ -70,3 +70,14 @@ Which of the enumerated interactions belong in the first pass?
 2. **Containers.** View-only first, or take/place items? Taking items means the hotbar must hold items as well as blocks (icons and names for ~200 items). Lean: view-only first, item moves as a follow-up.
 3. **Entities.** Render paintings, item frames and mobs as a separate yak now (static, no AI)? Lean: yes, paintings and item frames first; mobs as simple boxes or skipped.
 4. **Simulation** (redstone, liquids, falling blocks, growth): confirm out of scope. Lean: out.
+
+---
+▸ 2026-11-01T01:24:04Z [Joel Webber]
+kind: answer
+needs: agent
+---
+
+1. Sounds good. Let's file yaks for any we don't choose to do out of the gate.
+2. View-only is fine to start.
+3. :thumbs-up:
+4. Yeah, out of scope. We can file a low-pri yak just to track the ideas.
