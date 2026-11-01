@@ -5,8 +5,8 @@ status: hairy
 type: feature
 priority: 3
 created: '2026-10-31T23:21:32Z'
-updated: '2026-11-01T01:17:10Z'
-needs: human
+updated: '2026-11-01T01:50:58Z'
+needs: agent
 ---
 
 Initially, let's just focus on a manual save affordance in the menu (I guess we'll need a menu first!). Presumably we'd need some other serving mechanism to even be _able_ to save anything. We can explore that as well, but also preserve an "ephemeral" mode for read-only deployments with no server.
@@ -25,3 +25,14 @@ Persistence needs a format and a home. Options and leans:
 2. **Read-only (Pages) builds.** Edits live in memory and are lost on reload; Save is replaced by "Download world (.zip)". Optionally, autosave changed columns to the browser's IndexedDB so a reload keeps them. Lean: download first, IndexedDB as a follow-up.
 3. **Server** (yak `mem-a1f7`). A small Rust server in this workspace (e.g. axum) that serves the web build and one world dir, with an endpoint the viewer probes to enable Save; no auth, for local/LAN use at first. Lean: yes, after the writer and native save.
 4. **Native.** Load a world from a directory given on the command line (the embedded world stays the default), and Save writes it back in place, keeping a backup copy. Lean: yes.
+
+---
+▸ 2026-11-01T01:50:58Z [Joel Webber]
+kind: answer
+needs: agent
+---
+
+1. As long as you think the format is reasonable and not too much of a pain to work with, then that's good with me.
+2. That's good with me. I'm not worried about the download case -- this read-only mode only needs to exist as a simple fallback.
+3. Yup, that works.
+4. :thumbs-up:

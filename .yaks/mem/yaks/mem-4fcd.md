@@ -6,7 +6,7 @@ type: feature
 priority: 3
 created: '2026-10-31T23:19:11Z'
 updated: '2026-11-01T02:00:57Z'
-needs: human
+needs: agent
 ---
 
 We're not trying to reimplement minecraft game logic, just extend this viewer to allow for a simple creative-mode playground. To that end, we need the ability to remove and place blocks. Which also implies the ability to pick the current block. The most natural solution to this is to implement a very basic Minecraft-style toolbar, and a basic block/object search UI.
@@ -45,6 +45,18 @@ Worker `cat-1` on `mem-8d69`: thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADonT5IBxBArrcX
 ▸ 2026-11-01T01:30:55Z [herd]
 
 Worker `cat-1` died: its subthread hit the model spending limit ("Token-based spending limit reached"). It left an uncommitted 408-line `catalog.rs` draft in its worktree; the yakherd will review and finish it.
+
+---
+▸ 2026-11-01T01:46:10Z [Joel Webber]
+kind: answer
+needs: agent
+---
+
+1. Let's not use scroll wheel for item selection. That sucks on touch pads. 1-9 is fine.
+2. Fine to go with those. Pretty standard minecraft controls.
+3. Oh, Bevy UI is fine. I'd rather the whole thing stay simple and native.
+4. Exactly.
+5. Works for me!
 
 ---
 ▸ 2026-11-01T01:59:31Z [herd]
