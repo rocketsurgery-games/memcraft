@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T22:30:29Z'
+updated: '2026-11-01T23:32:22Z'
 parent: mem-f4c5
 ---
 
@@ -76,3 +76,26 @@ paint-3 start: Sun Nov  1 22:10:40 UTC 2026. Checkout /home/user/memcraft-2, bas
 ▸ 2026-11-01T22:30:29Z [paint-3]
 
 Progress: rebuilt entities.rs, item_icons.rs, build.rs painting embed, PP painting+item textures (+sources/attribution/README). cargo test --workspace passes (157 paintings, 9 frames, 8 with icon). Checkpoint commit local. Now clippy + web build + Playwright.
+
+![painting-sunset](mem-15e6/painting-sunset.png)
+
+![item-frames](mem-15e6/item-frames.png)
+
+---
+▸ 2026-11-01T23:32:22Z [paint-3]
+
+Done, committed locally as 7bb9ab7 (one commit on main over 0a53ca6; not pushed, not shorn).
+
+**What changed**
+- `entities.rs`: paintings from the entity records (id&0xff==83, `Pos`, `Direction`, `Motive`) and item frames from `ItemFrame` block entities (block 199). Static meshes spawned once in PostStartup; logs `drew N paintings and M item frames (K with an item icon)`.
+- `item_icons.rs` + 151 Pixel Perfection item textures (`item_*.png`): held item icon on frames (block items use their side tile, dyes tinted).
+- `build.rs` embeds the painting sheet; paintings have their own image/material rather than going in the block atlas.
+- `mcpe-world` re-exports `nbt::Tag` (no Cargo.toml edits); a few mesh/world helpers made `pub`.
+- Assets listed in textures-sources.txt, ATTRIBUTION.md, README.
+
+**Evidence**
+- `cargo test --workspace` pass; `cargo clippy --workspace --all-targets -- -D warnings` clean; wasm clippy and `sh crates/memcraft-viewer/web/build.sh` ok (before final squash; native checks re-run after).
+- Headless Chromium (`NODE_PATH=~/tools/drive/node_modules node crates/memcraft-viewer/web/drive.js <dist> <out>`): console `drew 157 paintings and 9 item frames (8 with an item icon)`.
+- Screenshots attached were taken with a temporary build-time camera override (DBG_VIEW in start_view) so the camera sits in front of a painting / the frames room; that override is NOT in the commit.
+
+**Known gaps**: static only (no interaction/targeting/break); paintings are a front quad only (no rim/back); item rotation, enchant glint, damage variants other than dye and items without a Pixel Perfection icon are not drawn; shading uses the same `light` heuristic as blocks.
