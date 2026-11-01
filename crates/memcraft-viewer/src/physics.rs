@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use mcpe_world::{ChunkPos, World as PeWorld, HEIGHT};
 
-use crate::blocks::{self, Shape};
+use crate::blocks::{self, Box16, Boxes, Near, Shape, FULL_BLOCK};
 
 /// Player box: 0.6 wide and 1.8 tall, with the eyes 1.62 above the feet.
 pub const HALF_WIDTH: f32 = 0.3;
@@ -35,47 +35,50 @@ const MAX_FRAME: f32 = 0.1;
 
 const COLUMN_BLOCKS: usize = 16 * 16 * HEIGHT;
 
-/// Sixteenths of a block that are solid from the bottom of the block up.
-type Fill = u8;
-const FULL: Fill = 16;
+/// A block as `id << 8 | data`.
+type Block = u16;
 
-/// What can be stood on or run into: for every block, how much of it (from
-/// the floor up) is solid.
+fn pack(id: u8, data: u8) -> Block {
+    Block::from(id) << 8 | Block::from(data)
+}
+
+/// What can be stood on or run into: a compact copy of the world's blocks,
+/// so the viewer doesn't have to keep the whole `mcpe_world::World` alive.
+/// The solid parts of a block (see [`collision`]) are worked out when asked,
+/// so a fence is right whatever stands next to it, with no bookkeeping when
+/// a block changes.
 ///
-/// This is a compact copy of the world, one byte per block, so the viewer
-/// doesn't have to keep the whole `mcpe_world::World` alive. Columns that
-/// aren't loaded count as solid, and so does everything below the world, so
-/// the player can't walk off the edge into the void.
-/// How much of a block is solid, as `blocks::look` draws it: cubes, slabs
-/// and glass are solid, flowers and air are not, and neither is liquid
-/// (there is no swimming yet, so you sink through it).
-fn fill(id: u8, data: u8) -> Fill {
+/// Columns that aren't loaded count as solid, and so does everything below
+/// the world, so the player can't walk off the edge into the void.
+#[derive(Resource, Default)]
+pub struct Solids {
+    columns: HashMap<ChunkPos, Box<[Block]>>,
+}
+
+/// The boxes of a block that stop the player, as `blocks::look` draws it:
+/// cubes, slabs and glass are solid, flowers and air are not, and neither is
+/// liquid (there is no swimming yet, so you sink through it). Box-shaped
+/// blocks say for themselves (open doors and gates can be walked through,
+/// fences are 1.5 tall).
+fn collision(id: u8, data: u8, near: Near) -> Boxes {
     match blocks::look(id, data).shape {
-        _ if matches!(id, 8..=11) => 0,
-        Shape::Air | Shape::Cross => 0,
-        Shape::Cube | Shape::Translucent => FULL,
-        Shape::Partial(h) => (h * f32::from(FULL)).round() as Fill,
+        _ if matches!(id, 8..=11) => Boxes::default(),
+        Shape::Air | Shape::Cross => Boxes::default(),
+        Shape::Cube | Shape::Translucent => Boxes::of(&[FULL_BLOCK]),
+        Shape::Partial(h) => Boxes::of(&[[0, 0, 0, 16, (h * 16.0).round() as u8, 16]]),
+        Shape::Boxes => blocks::model(id, data, near).collision,
     }
 }
 
-#[derive(Resource, Default)]
-pub struct Solids {
-    columns: HashMap<ChunkPos, Box<[Fill]>>,
-}
-
 impl Solids {
-    /// Solidity of every block of `world` (see [`fill`]).
+    /// A copy of every block of `world`.
     pub fn from_world(world: &PeWorld) -> Self {
         let mut solids = Self::default();
         for (pos, col) in &world.columns {
             let column = solids.column_mut(*pos);
-            for x in 0..16 {
-                for z in 0..16 {
-                    for y in 0..HEIGHT {
-                        let (id, data) = col.block(x, y, z);
-                        column[Self::index(x, y, z)] = fill(id, data);
-                    }
-                }
+            // Both lay their blocks out the same way (see `Self::index`).
+            for (to, (&id, &data)) in column.iter_mut().zip(col.ids.iter().zip(&col.data)) {
+                *to = pack(id, data);
             }
         }
         solids
@@ -91,21 +94,24 @@ impl Solids {
     pub fn set_block(&mut self, x: i32, y: i32, z: i32, id: u8, data: u8) {
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
         if let Some(c) = self.columns.get_mut(&pos).filter(|_| (0..HEIGHT as i32).contains(&y)) {
-            c[Self::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize)] = fill(id, data);
+            c[Self::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize)] = pack(id, data);
         }
     }
 
-    fn column_mut(&mut self, pos: ChunkPos) -> &mut [Fill] {
+    fn column_mut(&mut self, pos: ChunkPos) -> &mut [Block] {
         self.columns.entry(pos).or_insert_with(|| vec![0; COLUMN_BLOCKS].into())
     }
 
-    /// Makes block `(x, y, z)` solid up to `height` (0 to 1) of its own,
-    /// loading its (otherwise empty) column if needed.
+    /// Makes block `(x, y, z)` a solid box from the floor up to `height`
+    /// (a multiple of an eighth, 0 to 1) of its own, loading its (otherwise
+    /// empty) column if needed. It is a layer of snow.
     #[cfg(test)]
     pub fn set(&mut self, x: i32, y: i32, z: i32, height: f32) {
+        let eighths = (height * 8.0).round() as u8;
+        assert!(eighths as f32 == height * 8.0 && eighths <= 8, "not a snow layer height: {height}");
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
         let i = Self::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize);
-        self.column_mut(pos)[i] = (height * f32::from(FULL)).round() as Fill;
+        self.column_mut(pos)[i] = if eighths == 0 { 0 } else { pack(78, eighths - 1) };
     }
 
     /// Loads an empty column, as the world would for open air.
@@ -114,42 +120,62 @@ impl Solids {
         self.column_mut(ChunkPos { x, z });
     }
 
-    /// How high the solid part of block `(x, y, z)` reaches, 0.0 to 1.0.
-    fn height(&self, x: i32, y: i32, z: i32) -> f32 {
-        if y < 0 {
-            return 1.0;
-        }
+    /// The block at `(x, y, z)`; `None` if it is solid for want of knowing
+    /// better (below the world, in an unloaded column). Above the world is air.
+    fn block(&self, x: i32, y: i32, z: i32) -> Option<(u8, u8)> {
         if y >= HEIGHT as i32 {
-            return 0.0;
+            return Some((0, 0));
+        }
+        if y < 0 {
+            return None;
         }
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
-        match self.columns.get(&pos) {
-            Some(c) => {
-                let i = Self::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize);
-                f32::from(c[i]) / f32::from(FULL)
-            }
-            None => 1.0,
+        let c = self.columns.get(&pos)?;
+        let b = c[Self::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize)];
+        Some(((b >> 8) as u8, b as u8))
+    }
+
+    /// The solid boxes of block `(x, y, z)`, in sixteenths of the block.
+    fn boxes(&self, x: i32, y: i32, z: i32) -> Boxes {
+        match self.block(x, y, z) {
+            None => Boxes::of(&[FULL_BLOCK]),
+            Some((id, data)) => collision(id, data, &|dx, dy, dz| self.block(x + dx, y + dy, z + dz).unwrap_or((0, 0))),
         }
+    }
+
+    /// How high the solid part of block `(x, y, z)` reaches, 0.0 to 1.5.
+    #[cfg(test)]
+    fn height(&self, x: i32, y: i32, z: i32) -> f32 {
+        self.boxes(x, y, z).iter().map(|b| f32::from(b[4]) / 16.0).fold(0.0, f32::max)
+    }
+
+    /// The blocks that may have solid parts within `[lo, hi]`: those it
+    /// overlaps, and the row below them, since a fence reaches up into the
+    /// block above it.
+    fn cells(lo: Vec3, hi: Vec3) -> impl Iterator<Item = IVec3> {
+        let (lo, hi) = (lo.floor().as_ivec3(), hi.floor().as_ivec3());
+        (lo.x..=hi.x).flat_map(move |x| {
+            (lo.y - 1..=hi.y).flat_map(move |y| (lo.z..=hi.z).map(move |z| IVec3::new(x, y, z)))
+        })
+    }
+
+    /// The solid boxes of a block, in world space as `(min, max)`.
+    fn cell_boxes(&self, cell: IVec3) -> impl Iterator<Item = (Vec3, Vec3)> {
+        let sixteenth = |b: Box16, i: usize| f32::from(b[i]) / 16.0;
+        self.boxes(cell.x, cell.y, cell.z).into_iter().map(move |b| {
+            let origin = cell.as_vec3();
+            let (lo, hi) = (Vec3::new(sixteenth(b, 0), sixteenth(b, 1), sixteenth(b, 2)), Vec3::new(sixteenth(b, 3), sixteenth(b, 4), sixteenth(b, 5)));
+            (origin + lo, origin + hi)
+        })
     }
 
     /// Whether a player with their feet at `feet` fits there.
     pub fn is_free(&self, feet: Vec3) -> bool {
-        self.touching(Aabb::at(feet)).is_none()
-    }
-
-    /// Some solid block overlapping `b`, if any.
-    fn touching(&self, b: Aabb) -> Option<IVec3> {
+        let b = Aabb::at(feet);
         let (lo, hi) = (b.min + EPS, b.max - EPS);
-        for x in lo.x.floor() as i32..=hi.x.floor() as i32 {
-            for y in lo.y.floor() as i32..=hi.y.floor() as i32 {
-                for z in lo.z.floor() as i32..=hi.z.floor() as i32 {
-                    if self.height(x, y, z) > 0.0 && y as f32 + self.height(x, y, z) > lo.y {
-                        return Some(IVec3::new(x, y, z));
-                    }
-                }
-            }
-        }
-        None
+        !Self::cells(lo, hi)
+            .flat_map(|cell| self.cell_boxes(cell))
+            .any(|(bmin, bmax)| (0..3).all(|i| bmax[i] > lo[i] && bmin[i] < hi[i]))
     }
 
     /// How far `b` can move along `axis` (a unit vector) by `delta` before
@@ -162,26 +188,15 @@ impl Solids {
         lo[a] = b.min[a].min(b.min[a] + delta);
         hi[a] = b.max[a].max(b.max[a] + delta);
         let mut d = delta;
-        for x in lo.x.floor() as i32..=hi.x.floor() as i32 {
-            for y in lo.y.floor() as i32..=hi.y.floor() as i32 {
-                for z in lo.z.floor() as i32..=hi.z.floor() as i32 {
-                    let h = self.height(x, y, z);
-                    if h == 0.0 {
-                        continue;
-                    }
-                    let cell = Vec3::new(x as f32, y as f32, z as f32);
-                    let (bmin, bmax) = (cell, cell + Vec3::new(1.0, h, 1.0));
-                    // Skip blocks that don't overlap the box on the other axes
-                    // (only slabs can miss on Y, as their cell is tested whole).
-                    if (0..3).any(|i| i != a && (bmax[i] <= b.min[i] + EPS || bmin[i] >= b.max[i] - EPS)) {
-                        continue;
-                    }
-                    if d > 0.0 && bmin[a] >= b.max[a] - EPS {
-                        d = d.min((bmin[a] - b.max[a]).max(0.0));
-                    } else if d < 0.0 && bmax[a] <= b.min[a] + EPS {
-                        d = d.max((bmax[a] - b.min[a]).min(0.0));
-                    }
-                }
+        for (bmin, bmax) in Self::cells(lo, hi).flat_map(|cell| self.cell_boxes(cell)) {
+            // Skip boxes that don't overlap the player's on the other axes.
+            if (0..3).any(|i| i != a && (bmax[i] <= b.min[i] + EPS || bmin[i] >= b.max[i] - EPS)) {
+                continue;
+            }
+            if d > 0.0 && bmin[a] >= b.max[a] - EPS {
+                d = d.min((bmin[a] - b.max[a]).max(0.0));
+            } else if d < 0.0 && bmax[a] <= b.min[a] + EPS {
+                d = d.max((bmax[a] - b.min[a]).min(0.0));
             }
         }
         d
@@ -444,6 +459,104 @@ mod tests {
         assert!(feet.x > 6.0 && (feet.y - 1.0).abs() < 1e-3, "{feet}");
     }
 
+    /// A stone wall three high along `x = 5` with a one wide doorway at
+    /// `z = 0`, over a floor.
+    fn wall_with_doorway() -> Solids {
+        let mut solids = floor(-8, 20, -8, 8);
+        for y in 1..4 {
+            for z in -8..=8 {
+                solids.set(5, y, z, 1.0);
+            }
+        }
+        for y in 1..4 {
+            solids.set(5, y, 0, 0.0);
+        }
+        solids
+    }
+
+    /// Walks east from the doorway's west side at `z = 0.5` for three seconds.
+    fn walk_through_the_doorway(solids: &Solids) -> Vec3 {
+        let (mut body, mut feet) = (Body::default(), Vec3::new(0.5, 1.0, 0.5));
+        run(&mut body, &mut feet, solids, WALK, false, 3.0);
+        feet
+    }
+
+    #[test]
+    fn an_open_door_can_be_walked_through_and_a_closed_one_cannot() {
+        // Facing east: closed, its plate is the west 3/16 of the doorway.
+        let mut solids = wall_with_doorway();
+        solids.set_block(5, 1, 0, 64, 0);
+        solids.set_block(5, 2, 0, 64, 8);
+        let feet = walk_through_the_doorway(&solids);
+        assert!(feet.x + HALF_WIDTH <= 5.0 + EPS, "walked through a closed door: {feet}");
+        assert!(feet.x + HALF_WIDTH > 4.9, "should be pressed against it: {feet}");
+        // Open, with its hinge on the left, it stands against the north side.
+        solids.set_block(5, 1, 0, 64, 4);
+        let feet = walk_through_the_doorway(&solids);
+        assert!(feet.x > 8.0 && (feet.y - 1.0).abs() < 1e-3, "stuck in an open doorway: {feet}");
+        // Open with its hinge on the right, it stands on the south side instead.
+        solids.set_block(5, 2, 0, 64, 9);
+        let feet = walk_through_the_doorway(&solids);
+        assert!(feet.x > 8.0, "stuck in an open doorway: {feet}");
+    }
+
+    #[test]
+    fn open_gates_signs_and_levers_are_passable() {
+        for (id, data) in [(107, 4), (107, 5), (63, 0), (68, 2), (69, 5), (77, 3)] {
+            let mut solids = wall_with_doorway();
+            solids.set_block(5, 1, 0, id, data);
+            let feet = walk_through_the_doorway(&solids);
+            assert!(feet.x > 8.0, "{id}:{data} stopped the player at {feet}");
+        }
+        // ... but a closed gate is shut.
+        let mut solids = wall_with_doorway();
+        solids.set_block(5, 1, 0, 107, 1);
+        let feet = walk_through_the_doorway(&solids);
+        assert!(feet.x + HALF_WIDTH <= 5.0 + 6.0 / 16.0 + EPS && feet.x > 4.5, "{feet}");
+    }
+
+    #[test]
+    fn a_fence_is_a_barrier_that_cannot_be_jumped() {
+        let mut solids = floor(-8, 20, -8, 8);
+        for z in -8..=8 {
+            solids.set_block(5, 1, z, 85, 0);
+        }
+        for jump in [false, true] {
+            let (mut body, mut feet) = (Body::default(), Vec3::new(0.5, 1.0, 0.5));
+            run(&mut body, &mut feet, &solids, WALK, jump, 3.0);
+            // The post's face is 6/16 into the block, and a jump does not
+            // reach the fence's top at 1.5.
+            assert!(feet.x + HALF_WIDTH <= 5.0 + 6.0 / 16.0 + EPS, "over or through the fence: {feet}");
+            assert!(feet.x + HALF_WIDTH > 5.0, "should be at the fence: {feet}");
+            assert!(feet.y < 2.5 && feet.y >= 1.0, "{feet}");
+        }
+        // Its collision box is 1.5 high, standing in the block above it too.
+        assert_eq!(solids.height(5, 1, 0), 1.5);
+        assert!(!solids.is_free(Vec3::new(5.5, 2.0, 0.5)), "the top half block of a fence is solid");
+        assert!(solids.is_free(Vec3::new(5.5, 2.5, 0.5)));
+    }
+
+    #[test]
+    fn stairs_are_walked_up_without_jumping() {
+        let mut solids = floor(-8, 20, -8, 8);
+        for z in -8..=8 {
+            // Rising east, then the full block they lead to.
+            solids.set_block(5, 1, z, 53, 0);
+            for x in 6..=9 {
+                solids.set_block(x, 1, z, 1, 0);
+            }
+        }
+        let (mut body, mut feet) = (Body::default(), Vec3::new(0.5, 1.0, 0.5));
+        run(&mut body, &mut feet, &solids, WALK, false, 2.0);
+        assert!(feet.x > 6.5 && (feet.y - 2.0).abs() < 1e-3, "{feet}");
+        // Upside down, they are a slab in the top half of the block with the
+        // step under it: one can stand on top, but not in the block.
+        let mut solids = floor(-8, 20, -8, 8);
+        solids.set_block(5, 1, 0, 53, 4);
+        assert!(!solids.is_free(Vec3::new(5.5, 1.0, 0.5)));
+        assert!(solids.is_free(Vec3::new(5.5, 2.0, 0.5)));
+    }
+
     #[test]
     fn hits_its_head_on_a_ceiling() {
         let mut solids = floor(-8, 8, -8, 8);
@@ -516,6 +629,14 @@ mod tests {
         assert!(!solids.is_free(Vec3::new(15.9, 1.0, 8.0)), "box pokes into the unloaded column");
     }
 
+    /// How high the solid part of block `y` reaches at the point `(x, z)`.
+    fn ground(solids: &Solids, x: f32, y: i32, z: f32) -> f32 {
+        let (bx, bz) = (x.floor(), z.floor());
+        let (lx, lz) = (((x - bx) * 16.0) as u8, ((z - bz) * 16.0) as u8);
+        let boxes = solids.boxes(bx as i32, y, bz as i32);
+        boxes.iter().filter(|b| b[0] <= lx && lx < b[3] && b[2] <= lz && lz < b[5]).map(|b| f32::from(b[4]) / 16.0).fold(0.0, f32::max)
+    }
+
     /// The real world: drop the player into many columns, crossing chunk
     /// seams, from the top of the world; each lands on the highest solid
     /// block there and nowhere deeper.
@@ -530,14 +651,14 @@ mod tests {
         for i in 0..100 {
             for j in 0..100 {
                 let (x, z) = (x0 as f32 + 2.5 + i as f32 * 2.0 + (i % 3) as f32 * 0.4, z0 as f32 + 2.5 + j as f32 * 2.0);
-                let top = (0..HEIGHT as i32).rev().find(|&y| solids.height(x.floor() as i32, y, z.floor() as i32) > 0.0);
+                let top = (0..HEIGHT as i32).rev().find(|&y| ground(&solids, x, y, z) > 0.0);
                 let Some(top) = top else { continue };
                 let (mut body, mut feet) = (Body::default(), Vec3::new(x, HEIGHT as f32 - 0.5, z));
                 if !solids.is_free(feet) {
                     continue;
                 }
                 run(&mut body, &mut feet, &solids, Vec2::ZERO, false, 6.0);
-                let expect = top as f32 + solids.height(x.floor() as i32, top, z.floor() as i32);
+                let expect = top as f32 + ground(&solids, x, top, z);
                 // The box is 0.6 wide, so a taller neighbour column can hold it up.
                 assert!(feet.y >= expect - 1e-3, "fell through to {feet} at ({x}, {z}), terrain top {expect}");
                 assert!(solids.is_free(feet), "ended up inside terrain at {feet}");

@@ -3,7 +3,7 @@
 
 use mcpe_world::{World, HEIGHT};
 
-use crate::blocks::{atlas, look, Layer, Look, Shape, Tile};
+use crate::blocks::{atlas, look, model, Box16, Layer, Look, Shape, Tile};
 
 /// Interleaved-by-field vertex data, ready for a GPU mesh.
 #[derive(Default)]
@@ -52,16 +52,49 @@ impl ColumnMesh {
     }
 }
 
-/// The atlas rectangle `[u0, v0, u1, v1]` of the bottom `height` (0..1) of a
-/// tile. Inset by a sliver of a texel so nearest sampling never reads the
-/// neighbouring tile.
-fn tile_uv(tile: Tile, height: f32) -> [f32; 4] {
+/// The atlas rectangle `[u0, v0, u1, v1]` of the part `[u0, v0, u1, v1]`
+/// (each 0..1, v downwards) of a tile. Inset by a sliver of a texel so
+/// nearest sampling never reads the neighbouring tile.
+fn tile_rect(tile: Tile, [u0, v0, u1, v1]: [f32; 4]) -> [f32; 4] {
     const INSET: f32 = 0.01;
     let (w, h) = (atlas::WIDTH as f32, atlas::HEIGHT as f32);
     let px = atlas::TILE_PX as f32;
     let (x, y) = ((tile as u32 % atlas::COLS) as f32 * px, (tile as u32 / atlas::COLS) as f32 * px);
-    let (top, bottom) = (y + px * (1.0 - height), y + px);
-    [(x + INSET) / w, (top + INSET) / h, (x + px - INSET) / w, (bottom - INSET) / h]
+    [(x + px * u0 + INSET) / w, (y + px * v0 + INSET) / h, (x + px * u1 - INSET) / w, (y + px * v1 - INSET) / h]
+}
+
+/// The atlas rectangle of the bottom `height` (0..1) of a tile.
+fn tile_uv(tile: Tile, height: f32) -> [f32; 4] {
+    tile_rect(tile, [0.0, 1.0 - height, 1.0, 1.0])
+}
+
+/// Where a point of face `face` (an index into [`FACES`]) of a block, in
+/// sixteenths of the block, falls on a tile pasted on the face with its top
+/// up (sides) or north (top and bottom): `(u, v)` in sixteenths of the tile.
+fn face_uv(face: usize, p: [u8; 3]) -> (u8, u8) {
+    match face {
+        0 => (16 - p[2], 16 - p[1]),
+        1 => (p[2], 16 - p[1]),
+        2 => (p[0], p[2]),
+        3 => (p[0], 16 - p[2]),
+        4 => (p[0], 16 - p[1]),
+        _ => (16 - p[0], 16 - p[1]),
+    }
+}
+
+/// Whether face `face` of box `i` of `boxes` lies flat against a face of
+/// another box that looks the other way and covers it, so nobody can see it.
+fn covered_by_sibling(boxes: &[Box16], i: usize, face: usize) -> bool {
+    // Axis of the face, and whether it is the box's far side on that axis.
+    let (a, far) = (face / 2, face.is_multiple_of(2));
+    let (u, v) = [(1, 2), (0, 2), (0, 1)][a];
+    let b = boxes[i];
+    let plane = if far { b[a + 3] } else { b[a] };
+    boxes.iter().enumerate().any(|(j, o)| {
+        // `o`'s opposite face must be on the same plane, and span ours.
+        let theirs = if far { o[a] } else { o[a + 3] };
+        j != i && theirs == plane && o[u] <= b[u] && o[u + 3] >= b[u + 3] && o[v] <= b[v] && o[v + 3] >= b[v + 3]
+    })
 }
 
 /// Six face directions: offset and the face's corners on a unit cube
@@ -143,6 +176,36 @@ pub fn mesh_column(world: &World, cx: i32, cz: i32, light: &dyn Fn(i32, i32, i32
                             out.quad(c, n, shade(&l, k, sky), uv);
                         }
                     }
+                    Shape::Boxes => {
+                        let sky = light(x, y, z);
+                        let boxes = model(id, data, &|dx, dy, dz| world.block(x + dx, y + dy, z + dz)).visual;
+                        let out = mesh.layer(l.layer);
+                        for (bi, b) in boxes.iter().enumerate() {
+                            for (i, (d, corners, k)) in FACES.into_iter().enumerate() {
+                                // A face on the block's edge is hidden by an opaque cube there.
+                                let on_edge = if d.iter().sum::<i32>() > 0 { b[i / 2 + 3] == 16 } else { b[i / 2] == 0 };
+                                if on_edge {
+                                    let (nx, ny, nz) = (x + d[0], y + d[1], z + d[2]);
+                                    let n = neighbour(nx, ny, nz).1;
+                                    if (n.shape == Shape::Cube && n.layer == Layer::Opaque) || ny < 0 {
+                                        continue;
+                                    }
+                                }
+                                if covered_by_sibling(&boxes, bi, i) {
+                                    continue;
+                                }
+                                // The box's own corner: its min or max on each axis.
+                                let at = |p: [f32; 3]| [0, 1, 2].map(|a| if p[a] == 0.0 { b[a] } else { b[a + 3] });
+                                let c = corners.map(|p| at(p).map(|v| f32::from(v) / 16.0));
+                                let c = c.map(|p| [origin[0] + p[0], origin[1] + p[1], origin[2] + p[2]]);
+                                // Texture the face with the part of the tile it covers.
+                                let ((u0, v1), (u1, v0)) = (face_uv(i, at(corners[0])), face_uv(i, at(corners[2])));
+                                let uv = [u0, v0, u1, v1].map(|v| f32::from(v) / 16.0);
+                                let n = [d[0] as f32, d[1] as f32, d[2] as f32];
+                                out.quad(c, n, shade(&l, k, sky), tile_rect(l.tiles[i], uv));
+                            }
+                        }
+                    }
                     Shape::Cross => {
                         let sky = light(x, y, z);
                         let color = shade(&l, 0.9, sky);
@@ -181,6 +244,65 @@ fn same_fluid(a: u8, b: u8) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A block, `(id, data)`, at local `(x, y, z)`.
+    type Placed = ((usize, usize, usize), (u8, u8));
+
+    /// The sample world with some blocks set in the open air above column
+    /// `(8, 8)`, meshed.
+    fn mesh_with(blocks: &[Placed]) -> ColumnMesh {
+        let mut w = mcpe_world::World::open_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../../worlds/My World")).unwrap();
+        let col = w.columns.get_mut(&mcpe_world::ChunkPos { x: 8, z: 8 }).unwrap();
+        for &((x, y, z), (id, data)) in blocks {
+            assert_eq!(col.block(x, y, z), (0, 0), "({x}, {y}, {z}) should be open air");
+            let i = mcpe_world::Column::index(x, y, z);
+            (col.ids[i], col.data[i]) = (id, data);
+        }
+        mesh_column(&w, 8, 8, &|_, _, _| 1.0)
+    }
+
+    fn quads(m: &MeshData) -> usize {
+        m.indices.len() / 6
+    }
+
+    #[test]
+    fn fence_boxes_are_meshed_without_their_hidden_faces() {
+        let none = quads(&mesh_with(&[]).opaque);
+        // A lone post is a box of six faces.
+        assert_eq!(quads(&mesh_with(&[((5, 120, 5), (85, 0))]).opaque), none + 6);
+        // Two fences side by side: each has a post and two rails whose
+        // face against the post is hidden by it.
+        let pair = mesh_with(&[((5, 120, 5), (85, 0)), ((6, 120, 5), (85, 0))]);
+        assert_eq!(quads(&pair.opaque), none + 2 * (6 + 2 * 5));
+    }
+
+    #[test]
+    fn box_faces_hide_against_opaque_cubes_only() {
+        let none = quads(&mesh_with(&[]).opaque);
+        // A closed door (a plate on the west edge) next to stone to the west:
+        // the lower half loses its west face to the stone. The stone keeps its
+        // face towards the door, which is not an opaque cube.
+        let door = |stone: u8| mesh_with(&[((5, 120, 5), (64, 0)), ((5, 121, 5), (64, 8)), ((4, 120, 5), (stone, 0))]);
+        assert_eq!(quads(&door(1).opaque), none + 5 + 6 + 6);
+        // Glass is not an opaque cube: the plate shows all its faces.
+        let with_glass = door(20);
+        assert_eq!(quads(&with_glass.opaque), none + 6 + 6);
+        assert_eq!(quads(&with_glass.translucent), 6 + quads(&mesh_with(&[]).translucent));
+    }
+
+    #[test]
+    fn box_textures_show_the_part_of_the_tile_they_cover() {
+        // The top of a 3/16 thick plate against the west edge: the strip
+        // `x` in 0..3, running the tile's whole depth.
+        let top = [0, 16, 16, 3, 16, 0];
+        let (u0, v1) = face_uv(2, [top[0], top[1], top[2]]);
+        let (u1, v0) = face_uv(2, [top[3], top[4], top[5]]);
+        assert_eq!([u0, v0, u1, v1], [0, 0, 3, 16]);
+        // Its east face is the whole tile, right way up.
+        let (u0, v1) = face_uv(0, [3, 0, 16]);
+        let (u1, v0) = face_uv(0, [3, 16, 0]);
+        assert_eq!([u0, v0, u1, v1], [0, 0, 16, 16]);
+    }
 
     #[test]
     fn sample_world_meshes_without_hidden_faces_blowing_up() {

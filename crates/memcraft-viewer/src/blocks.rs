@@ -26,6 +26,9 @@ pub enum Shape {
     Translucent,
     /// An opaque box from the floor up to the given height (slabs, snow, carpet, rails).
     Partial(f32),
+    /// One or more boxes that depend on the data value and the neighbours
+    /// (doors, fences, stairs, signs), see [`model`].
+    Boxes,
     /// Two crossed quads (flowers, grass, saplings, torches).
     Cross,
 }
@@ -95,6 +98,11 @@ const fn slab(h: f32, tiles: [Tile; 6]) -> Look {
 /// A box with see-through pixels (rails, ladders, lily pads).
 const fn slab_cutout(h: f32, tiles: [Tile; 6]) -> Look {
     new(Shape::Partial(h), Layer::Cutout, WHITE, 1.0, tiles)
+}
+
+/// A box-shaped block (see [`model`]); every box shows these tiles by face.
+const fn boxy(layer: Layer, tiles: [Tile; 6]) -> Look {
+    new(Shape::Boxes, layer, WHITE, 1.0, tiles)
 }
 
 const fn plant(tile: Tile) -> Look {
@@ -177,6 +185,26 @@ fn crop_stage(data: u8) -> usize {
         2 | 3 => 1,
         4..=6 => 2,
         _ => 3,
+    }
+}
+
+/// Stairs' materials, by block id.
+fn stairs_tiles(id: u8) -> [Tile; 6] {
+    match id {
+        67 => all(t::COBBLESTONE),
+        108 => all(t::BRICKS),
+        109 => all(t::STONE_BRICKS),
+        114 => all(t::NETHER_BRICKS),
+        128 => column(t::SANDSTONE_TOP, t::SANDSTONE, t::SANDSTONE_BOTTOM),
+        134 => all(t::SPRUCE_PLANKS),
+        135 => all(t::BIRCH_PLANKS),
+        136 => all(t::JUNGLE_PLANKS),
+        156 => column(t::QUARTZ_BLOCK_TOP, t::QUARTZ_BLOCK_SIDE, t::QUARTZ_BLOCK_BOTTOM),
+        163 => all(t::ACACIA_PLANKS),
+        164 => all(t::DARK_OAK_PLANKS),
+        180 => column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM),
+        203 => all(t::PURPUR_BLOCK),
+        _ => all(t::OAK_PLANKS),
     }
 }
 
@@ -287,7 +315,7 @@ pub fn look(id: u8, data: u8) -> Look {
         })),
         161 => solid_cutout(all(if data & 3 == 1 { t::DARK_OAK_LEAVES } else { t::ACACIA_LEAVES })),
         19 => solid(all(t::SPONGE)),
-        20 | 102 => glassy(t::GLASS),
+        20 => glassy(t::GLASS),
         21 => solid(all(t::LAPIS_ORE)),
         22 => solid(all(t::LAPIS_BLOCK)),
         23 => solid(facing(column(t::FURNACE_TOP, t::FURNACE_SIDE, t::FURNACE_TOP), data & 7, t::DISPENSER_FRONT)),
@@ -305,7 +333,6 @@ pub fn look(id: u8, data: u8) -> Look {
             2 => all(t::CUT_SANDSTONE),
             _ => column(t::SANDSTONE_TOP, t::SANDSTONE, t::SANDSTONE_BOTTOM),
         }),
-        128 => solid(column(t::SANDSTONE_TOP, t::SANDSTONE, t::SANDSTONE_BOTTOM)),
         26 => partial(0.5625, rgb(160, 30, 30)),
         27 => slab_cutout(0.0625, all(if data & 8 != 0 { t::POWERED_RAIL_ON } else { t::POWERED_RAIL })),
         28 => slab_cutout(0.0625, all(if data & 8 != 0 { t::DETECTOR_RAIL_ON } else { t::DETECTOR_RAIL })),
@@ -327,17 +354,7 @@ pub fn look(id: u8, data: u8) -> Look {
         50 => plant(t::TORCH),
         51 => plant(t::FIRE_0),
         52 => solid_cutout(all(t::SPAWNER)),
-        53 | 134 | 135 | 136 | 163 | 164 => slab(
-            0.5,
-            all(match id {
-                134 => t::SPRUCE_PLANKS,
-                135 => t::BIRCH_PLANKS,
-                136 => t::JUNGLE_PLANKS,
-                163 => t::ACACIA_PLANKS,
-                164 => t::DARK_OAK_PLANKS,
-                _ => t::OAK_PLANKS,
-            }),
-        ),
+        53 | 67 | 108 | 109 | 114 | 128 | 134..=136 | 156 | 163 | 164 | 180 | 203 => boxy(Layer::Opaque, stairs_tiles(id)),
         54 | 146 => cube(rgb(160, 115, 45)),
         56 => solid(all(t::DIAMOND_ORE)),
         57 => solid(all(t::DIAMOND_BLOCK)),
@@ -355,17 +372,19 @@ pub fn look(id: u8, data: u8) -> Look {
             data & 7,
             if id == 62 { t::FURNACE_FRONT_ON } else { t::FURNACE_FRONT },
         )),
-        63 | 68 => slab(0.5, all(t::OAK_PLANKS)),
-        64 => solid(all(t::OAK_PLANKS)),
-        71 => solid(all(t::IRON_BLOCK)),
-        193..=197 => solid(all(t::OAK_PLANKS)),
-        65 => slab_cutout(0.125, all(t::LADDER)),
-        67 => slab(0.5, all(t::COBBLESTONE)),
+        63 | 68 => boxy(Layer::Opaque, all(t::OAK_PLANKS)),
+        // The pack has no door textures: doors show their planks (or iron).
+        64 => boxy(Layer::Opaque, all(t::OAK_PLANKS)),
+        193..=197 => boxy(Layer::Opaque, all(PLANKS[id as usize - 192])),
+        71 => boxy(Layer::Opaque, all(t::IRON_BLOCK)),
+        65 => boxy(Layer::Cutout, all(t::LADDER)),
         70 => slab(0.0625, all(t::STONE)),
         72 => slab(0.0625, all(t::OAK_PLANKS)),
         147 => slab(0.0625, all(t::GOLD_BLOCK)),
         148 => slab(0.0625, all(t::IRON_BLOCK)),
-        69 | 77 | 143 => partial(0.0625, rgb(130, 130, 130)),
+        69 => boxy(Layer::Opaque, all(t::COBBLESTONE)),
+        77 => boxy(Layer::Opaque, all(t::STONE)),
+        143 => boxy(Layer::Opaque, all(t::OAK_PLANKS)),
         73 | 74 => solid(all(t::REDSTONE_ORE)),
         75 => plant(t::REDSTONE_TORCH_OFF),
         76 => plant(t::REDSTONE_TORCH),
@@ -375,10 +394,11 @@ pub fn look(id: u8, data: u8) -> Look {
         81 => solid(column(t::CACTUS_TOP, t::CACTUS_SIDE, t::CACTUS_BOTTOM)),
         82 => solid(all(t::CLAY)),
         84 => solid(column(t::JUKEBOX_TOP, t::JUKEBOX_SIDE, t::JUKEBOX_SIDE)),
-        85 | 107 | 183..=192 => slab(
-            1.0,
-            all(if id == 85 { PLANKS[d % 6] } else { t::OAK_PLANKS }),
-        ),
+        85 => boxy(Layer::Opaque, all(PLANKS[d % 6])),
+        107 => boxy(Layer::Opaque, all(t::OAK_PLANKS)),
+        // Gates 183..=187 and fences 188..=192: spruce, birch, jungle, then
+        // dark oak and acacia in the order of their ids.
+        183..=192 => boxy(Layer::Opaque, all(PLANKS[[1, 2, 3, 5, 4][(id as usize - 183) % 5]])),
         86 | 91 => {
             let front = if id == 86 { t::CARVED_PUMPKIN } else { t::JACK_O_LANTERN };
             // Data 0..3 faces south, west, north, east.
@@ -389,8 +409,8 @@ pub fn look(id: u8, data: u8) -> Look {
         88 => solid(all(t::SOUL_SAND)),
         89 => solid(all(t::GLOWSTONE)),
         92 => slab(0.5, column(t::CAKE_TOP, t::CAKE_SIDE, t::CAKE_BOTTOM)),
-        96 => slab_cutout(0.1875, all(t::TRAPDOOR)),
-        167 => slab(0.1875, all(t::IRON_TRAPDOOR)),
+        96 => boxy(Layer::Cutout, all(t::TRAPDOOR)),
+        167 => boxy(Layer::Opaque, all(t::IRON_TRAPDOOR)),
         97 => solid(all(t::STONE)),
         98 => solid(all(match data {
             1 => t::MOSSY_STONE_BRICKS,
@@ -404,15 +424,15 @@ pub fn look(id: u8, data: u8) -> Look {
             _ if id == 99 => t::BROWN_MUSHROOM_BLOCK,
             _ => t::RED_MUSHROOM_BLOCK,
         })),
-        101 => slab_cutout(1.0, all(t::IRON_BARS)),
+        101 => boxy(Layer::Cutout, all(t::IRON_BARS)),
+        102 => boxy(Layer::Blend, all(t::GLASS)),
         103 => solid(column(t::MELON_TOP, t::MELON_SIDE, t::MELON_TOP)),
         104 => plant(t::PUMPKIN_STEM),
         105 => plant(t::MELON_STEM),
-        108 => slab(0.5, all(t::BRICKS)),
-        109 => slab(0.5, all(t::STONE_BRICKS)),
         110 => solid(column(t::MYCELIUM_TOP, t::MYCELIUM_SIDE, t::DIRT)),
         111 => slab_cutout(0.0625, all(t::LILY_PAD)),
-        112..=114 => slab(if id == 114 { 0.5 } else { 1.0 }, all(t::NETHER_BRICKS)),
+        112 => solid(all(t::NETHER_BRICKS)),
+        113 => boxy(Layer::Opaque, all(t::NETHER_BRICKS)),
         115 => plant([t::NETHER_WART_STAGE0, t::NETHER_WART_STAGE1, t::NETHER_WART_STAGE1, t::NETHER_WART_STAGE2][d & 3]),
         116 => slab(0.75, column(t::ENCHANTING_TABLE_TOP, t::ENCHANTING_TABLE_SIDE, t::ENCHANTING_TABLE_BOTTOM)),
         117 => plant(t::BREWING_STAND),
@@ -424,21 +444,18 @@ pub fn look(id: u8, data: u8) -> Look {
         127 => plant([t::COCOA_STAGE0, t::COCOA_STAGE1, t::COCOA_STAGE2][(d >> 2).min(2)]),
         129 => solid(all(t::EMERALD_ORE)),
         133 => solid(all(t::EMERALD_BLOCK)),
-        139 => slab(1.0, all(if data == 1 { t::MOSSY_COBBLESTONE } else { t::COBBLESTONE })),
+        139 => boxy(Layer::Opaque, all(if data == 1 { t::MOSSY_COBBLESTONE } else { t::COBBLESTONE })),
         140 => partial(0.375, rgb(120, 60, 40)),
         145 => partial(1.0, rgb(70, 70, 70)),
         152 => solid(all(t::REDSTONE_BLOCK)),
         153 => solid(all(t::NETHER_QUARTZ_ORE)),
-        155 | 156 => {
-            let tiles = match data {
-                1 => column(t::CHISELED_QUARTZ_BLOCK_TOP, t::CHISELED_QUARTZ_BLOCK, t::CHISELED_QUARTZ_BLOCK_TOP),
-                2 => column(t::QUARTZ_PILLAR_TOP, t::QUARTZ_PILLAR, t::QUARTZ_PILLAR_TOP),
-                _ => column(t::QUARTZ_BLOCK_TOP, t::QUARTZ_BLOCK_SIDE, t::QUARTZ_BLOCK_BOTTOM),
-            };
-            if id == 155 { solid(tiles) } else { slab(0.5, tiles) }
-        }
+        155 => solid(match data {
+            1 => column(t::CHISELED_QUARTZ_BLOCK_TOP, t::CHISELED_QUARTZ_BLOCK, t::CHISELED_QUARTZ_BLOCK_TOP),
+            2 => column(t::QUARTZ_PILLAR_TOP, t::QUARTZ_PILLAR, t::QUARTZ_PILLAR_TOP),
+            _ => column(t::QUARTZ_BLOCK_TOP, t::QUARTZ_BLOCK_SIDE, t::QUARTZ_BLOCK_BOTTOM),
+        }),
         159 => solid(all(TERRACOTTA[d])),
-        160 => glassy(STAINED_GLASS[d]),
+        160 => boxy(Layer::Blend, all(STAINED_GLASS[d])),
         165 => glassy(t::SLIME_BLOCK),
         168 => solid(all(match data {
             1 => t::PRISMARINE_BRICKS,
@@ -451,10 +468,10 @@ pub fn look(id: u8, data: u8) -> Look {
         172 => solid(all(t::TERRACOTTA)),
         173 => solid(all(t::COAL_BLOCK)),
         174 => solid(all(t::PACKED_ICE)),
-        179 | 180 => solid(column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM)),
+        179 => solid(column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM)),
         198 => slab(0.9375, column(t::GRASS_PATH_TOP, t::GRASS_PATH_SIDE, t::DIRT)),
         199 => AIR, // item frame: drawn as an entity in later versions
-        201 | 203 | 204 | 205 => solid(all(t::PURPUR_BLOCK)),
+        201 | 204 | 205 => solid(all(t::PURPUR_BLOCK)),
         202 => solid(column(t::PURPUR_PILLAR_TOP, t::PURPUR_PILLAR, t::PURPUR_PILLAR_TOP)),
         241 => glassy(STAINED_GLASS[d]),
         243 => solid(column(t::PODZOL_TOP, t::PODZOL_SIDE, t::DIRT)),
@@ -466,9 +483,509 @@ pub fn look(id: u8, data: u8) -> Look {
     }
 }
 
+// Block geometry: boxes derived from (id, data) and neighbours.
+
+/// A box inside a block, in sixteenths: `[x0, y0, z0, x1, y1, z1]`. Collision
+/// boxes may reach above 16 (a fence is 1.5 blocks tall).
+pub type Box16 = [u8; 6];
+
+const MAX_BOXES: usize = 10;
+
+/// A short list of boxes, kept on the stack.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct Boxes {
+    len: usize,
+    items: [Box16; MAX_BOXES],
+}
+
+impl Boxes {
+    pub fn of(boxes: &[Box16]) -> Self {
+        let mut list = Self::default();
+        for &b in boxes {
+            list.push(b);
+        }
+        list
+    }
+
+    fn push(&mut self, b: Box16) {
+        debug_assert!(self.len < MAX_BOXES, "too many boxes");
+        if self.len < MAX_BOXES {
+            self.items[self.len] = b;
+            self.len += 1;
+        }
+    }
+}
+
+impl std::ops::Deref for Boxes {
+    type Target = [Box16];
+    fn deref(&self) -> &[Box16] {
+        &self.items[..self.len]
+    }
+}
+
+impl IntoIterator for Boxes {
+    type Item = Box16;
+    type IntoIter = std::iter::Take<std::array::IntoIter<Box16, MAX_BOXES>>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.into_iter().take(self.len)
+    }
+}
+
+/// The boxes of a [`Shape::Boxes`] block: what is drawn and what is collided
+/// with. They differ for signs and levers (no collision), open gates (nothing
+/// to collide with) and fences (the collision is 1.5 tall).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct Model {
+    pub visual: Boxes,
+    pub collision: Boxes,
+}
+
+impl Model {
+    fn solid(boxes: Boxes) -> Self {
+        Self { visual: boxes, collision: boxes }
+    }
+
+    fn passable(visual: Boxes) -> Self {
+        Self { visual, collision: Boxes::default() }
+    }
+}
+
+/// Looks at the block at an offset `(dx, dy, dz)` from the one being shaped;
+/// unloaded space reads as air.
+pub type Near<'a> = &'a dyn Fn(i32, i32, i32) -> (u8, u8);
+
+/// Horizontal directions in the order of Java's `getHorizontal`: south, west,
+/// north, east, as `(dx, dz)`. Turning a quarter clockwise seen from above
+/// moves to the next index.
+pub const DIRS: [(i32, i32); 4] = [(0, 1), (-1, 0), (0, -1), (1, 0)];
+
+/// `b` turned `n` quarter turns clockwise (seen from above) about the block's
+/// vertical axis.
+fn turn(mut b: Box16, n: usize) -> Box16 {
+    for _ in 0..n % 4 {
+        b = [16 - b[5], b[1], b[0], 16 - b[2], b[4], b[3]];
+    }
+    b
+}
+
+/// A box built against the north edge of the block, moved to the edge in
+/// direction `edge` (an index into [`DIRS`]).
+fn at_edge(b: Box16, edge: usize) -> Box16 {
+    turn(b, edge + 2)
+}
+
+/// The part of `b` in the lower (`up == false`) or upper half of the block.
+fn halve(mut b: Box16, up: bool) -> Box16 {
+    (b[1], b[4]) = if up { (8, 16) } else { (0, 8) };
+    b
+}
+
+pub const FULL_BLOCK: Box16 = [0, 0, 0, 16, 16, 16];
+
+/// A plate `thick` sixteenths thick against the north edge, turned to `edge`.
+fn plate(edge: usize, thick: u8) -> Box16 {
+    at_edge([0, 0, 0, 16, 16, thick], edge)
+}
+
+fn near_dir(near: Near, dir: usize) -> (u8, u8) {
+    near(DIRS[dir].0, 0, DIRS[dir].1)
+}
+
+fn is_door(id: u8) -> bool {
+    matches!(id, 64 | 71 | 193..=197)
+}
+
+fn is_gate(id: u8) -> bool {
+    matches!(id, 107 | 183..=187)
+}
+
+fn is_stairs(id: u8) -> bool {
+    matches!(id, 53 | 67 | 108 | 109 | 114 | 128 | 134..=136 | 156 | 163 | 164 | 180 | 203)
+}
+
+/// The box list of a [`Shape::Boxes`] block; empty for any other block.
+pub fn model(id: u8, data: u8, near: Near) -> Model {
+    match id {
+        64 | 71 | 193..=197 => door(data, near),
+        96 | 167 => trapdoor(data),
+        107 | 183..=187 => gate(data, near),
+        85 | 188..=192 => fence(Link::Wood, near),
+        113 => fence(Link::Nether, near),
+        139 => wall(near),
+        101 | 102 | 160 => pane(near),
+        53 | 67 | 108 | 109 | 114 | 128 | 134..=136 | 156 | 163 | 164 | 180 | 203 => stairs(data, near),
+        63 => standing_sign(data),
+        68 => wall_sign(data),
+        65 => ladder(data),
+        69 => lever(data),
+        77 | 143 => button(data),
+        _ => Model::default(),
+    }
+}
+
+/// Doors are a 3/16 plate. The lower half stores facing (bits 0-1) and
+/// open (bit 2), the upper half the hinge (bit 0, set for the right-hand one):
+/// each half reads the other.
+fn door(data: u8, near: Near) -> Model {
+    let other = |dy| Some(near(0, dy, 0)).filter(|&(id, _)| is_door(id)).map(|(_, d)| d);
+    let (lower, upper) = if data & 8 != 0 {
+        (other(-1).unwrap_or(0), data)
+    } else {
+        (data, other(1).unwrap_or(0))
+    };
+    // Facing 0..3 is east, south, west, north; a closed door sits on the side
+    // opposite the facing, an open one swings to the side of its hinge.
+    let facing = ((lower & 3) as usize + 3) % 4;
+    let edge = match (lower & 4 != 0, upper & 1 != 0) {
+        (false, _) => facing + 2,
+        (true, true) => facing + 1,
+        (true, false) => facing + 3,
+    };
+    Model::solid(Boxes::of(&[plate(edge % 4, 3)]))
+}
+
+/// Trapdoors (PE data: bits 0-1 east, west, south, north; 4 upside down; 8 open).
+fn trapdoor(data: u8) -> Model {
+    // The side it faces, away from the wall it hangs on when open.
+    let facing = [3, 1, 0, 2][(data & 3) as usize];
+    let b = if data & 8 != 0 {
+        plate((facing + 2) % 4, 3)
+    } else if data & 4 != 0 {
+        [0, 13, 0, 16, 16, 16]
+    } else {
+        [0, 0, 0, 16, 3, 16]
+    };
+    Model::solid(Boxes::of(&[b]))
+}
+
+/// Fence gates: facing 0..3 is south, west, north, east (the gate spans x
+/// when facing south or north), bit 2 open. Drawn lower between two walls.
+fn gate(data: u8, near: Near) -> Model {
+    let facing = (data & 3) as usize;
+    let along = if facing.is_multiple_of(2) { [1, 3] } else { [0, 2] };
+    let lower = if along.iter().any(|&d| near_dir(near, d).0 == 139) { 3 } else { 0 };
+    let low = |b: Box16| [b[0], b[1] - lower, b[2], b[3], b[4] - lower, b[5]];
+    let mut visual = Boxes::default();
+    let mut add = |b: Box16| visual.push(turn(low(b), facing));
+    add([0, 5, 7, 2, 16, 9]);
+    add([14, 5, 7, 16, 16, 9]);
+    if data & 4 == 0 {
+        add([2, 6, 7, 14, 9, 9]);
+        add([2, 12, 7, 14, 15, 9]);
+        add([6, 9, 7, 10, 12, 9]);
+    } else {
+        // Each leaf swings forward from its post.
+        for x in [0, 14] {
+            add([x, 6, 9, x + 2, 9, 15]);
+            add([x, 12, 9, x + 2, 15, 15]);
+            add([x, 9, 13, x + 2, 12, 15]);
+        }
+    }
+    let collision =
+        if data & 4 == 0 { Boxes::of(&[turn([0, 0, 6, 16, 24, 10], facing)]) } else { Boxes::default() };
+    Model { visual, collision }
+}
+
+/// What a connecting block (fence, wall, pane) joins up with.
+#[derive(Clone, Copy, PartialEq)]
+enum Link {
+    Wood,
+    Nether,
+    Wall,
+    Pane,
+}
+
+/// A block that fences, walls and panes attach to: a solid, full block.
+fn attaches(id: u8, data: u8) -> bool {
+    let l = look(id, data);
+    match l.shape {
+        // Not the cube-shaped blocks that are not solid in Minecraft.
+        Shape::Cube => l.layer == Layer::Opaque && !matches!(id, 10 | 11 | 29 | 33 | 34 | 54 | 81 | 86 | 91 | 103 | 146),
+        Shape::Translucent => !matches!(id, 8 | 9),
+        _ => false,
+    }
+}
+
+/// Whether a connecting block of kind `link` joins the block in direction
+/// `dir` of it, which is `n`.
+fn links(link: Link, dir: usize, n: (u8, u8)) -> bool {
+    let (id, data) = n;
+    let same = match link {
+        Link::Wood => matches!(id, 85 | 188..=192),
+        Link::Nether => id == 113,
+        Link::Wall => id == 139,
+        Link::Pane => matches!(id, 101 | 102 | 160),
+    };
+    // A gate joins the fence it is in line with: it faces across the link.
+    let gate = link != Link::Pane && is_gate(id) && (data as usize & 3) % 2 != dir % 2;
+    same || gate || attaches(id, data)
+}
+
+fn connected(link: Link, near: Near) -> [bool; 4] {
+    [0, 1, 2, 3].map(|d| links(link, d, near_dir(near, d)))
+}
+
+/// A post with two rails towards each neighbour it connects to; a 1.5 tall
+/// barrier.
+fn fence(link: Link, near: Near) -> Model {
+    let mut visual = Boxes::of(&[[6, 0, 6, 10, 16, 10]]);
+    let mut collision = Boxes::of(&[[6, 0, 6, 10, 24, 10]]);
+    for (dir, joined) in connected(link, near).into_iter().enumerate() {
+        if joined {
+            visual.push(turn([7, 6, 10, 9, 9, 16], dir));
+            visual.push(turn([7, 12, 10, 9, 15, 16], dir));
+            collision.push(turn([6, 0, 10, 10, 24, 16], dir));
+        }
+    }
+    Model { visual, collision }
+}
+
+/// Cobblestone walls: a post, left out between two walls in a straight line
+/// unless something sits on top, and low arms.
+fn wall(near: Near) -> Model {
+    let arms = connected(Link::Wall, near);
+    let straight = arms == [true, false, true, false] || arms == [false, true, false, true];
+    let post = !straight || near(0, 1, 0).0 != 0;
+    let mut visual = Boxes::default();
+    if post {
+        visual.push([4, 0, 4, 12, 16, 12]);
+    }
+    let mut collision = Boxes::of(&[[4, 0, 4, 12, 24, 12]]);
+    for (dir, joined) in arms.into_iter().enumerate() {
+        if joined {
+            visual.push(turn([5, 0, if post { 12 } else { 8 }, 11, 14, 16], dir));
+            collision.push(turn([5, 0, 12, 11, 24, 16], dir));
+        }
+    }
+    Model { visual, collision }
+}
+
+/// Glass panes and iron bars: a thin post and a thin arm towards each
+/// neighbour they connect to.
+fn pane(near: Near) -> Model {
+    let mut boxes = Boxes::of(&[[7, 0, 7, 9, 16, 9]]);
+    for (dir, joined) in connected(Link::Pane, near).into_iter().enumerate() {
+        if joined {
+            boxes.push(turn([7, 0, 9, 9, 16, 16], dir));
+        }
+    }
+    Model::solid(boxes)
+}
+
+/// Stairs (data: bits 0-1 rise towards east, west, south, north; 4 upside
+/// down). The rise turns into a corner step next to a stair that crosses it.
+fn stairs(data: u8, near: Near) -> Model {
+    let facing = [3, 1, 0, 2][(data & 3) as usize];
+    let up = data & 4 != 0;
+    // The facing and half of a stair in direction `dir`, if it is one.
+    let stair = |dir: usize| {
+        let (id, d) = near_dir(near, dir);
+        is_stairs(id).then_some(([3, 1, 0, 2][(d & 3) as usize], d & 4 != 0))
+    };
+    // A stair beside this one, in the corner shape's direction `side`, that
+    // does not already continue this stair (Minecraft's `isDifferentStairs`).
+    let differs = |side: usize| stair(side) != Some((facing, up));
+    // The half of the block towards `dir`, as a step.
+    let half = |dir: usize| halve(turn([0, 0, 8, 16, 16, 16], dir), !up);
+    // The quarter where the halves towards `a` and `b` meet.
+    let quarter = |a: usize, b: usize| {
+        let (p, q) = (half(a), half(b));
+        [p[0].max(q[0]), p[1], p[2].max(q[2]), p[3].min(q[3]), p[4], p[5].min(q[5])]
+    };
+    let mut boxes = Boxes::of(&[halve(FULL_BLOCK, up)]);
+    let front = stair(facing).filter(|&(f, u)| u == up && f % 2 != facing % 2);
+    let back = stair((facing + 2) % 4).filter(|&(f, u)| u == up && f % 2 != facing % 2);
+    match (front, back) {
+        // An outer corner: only the quarter next to the stair in front.
+        (Some((f, _)), _) if differs((f + 2) % 4) => boxes.push(quarter(facing, f)),
+        // An inner corner: the whole step, and the quarter next to the one behind.
+        (_, Some((f, _))) if differs(f) => {
+            boxes.push(half(facing));
+            boxes.push(quarter((facing + 2) % 4, f));
+        }
+        _ => boxes.push(half(facing)),
+    }
+    Model::solid(boxes)
+}
+
+/// A standing sign: a post under a board turned to the nearest quarter.
+fn standing_sign(data: u8) -> Model {
+    let quarter = ((data as usize & 15) + 2) / 4;
+    Model::passable(Boxes::of(&[[7, 0, 7, 9, 8, 9], turn([0, 8, 7, 16, 16, 9], quarter)]))
+}
+
+/// A wall sign (data: facing north, south, west, east is 2..5): a board
+/// on the wall behind it.
+fn wall_sign(data: u8) -> Model {
+    let facing = [2, 0, 1, 3][((data as usize).max(2) - 2) % 4];
+    Model::passable(Boxes::of(&[at_edge([0, 5, 0, 16, 13, 2], (facing + 2) % 4)]))
+}
+
+/// A ladder (data: facing north, south, west, east is 2..5), a 2/16 plate
+/// on the wall behind it.
+fn ladder(data: u8) -> Model {
+    let facing = [2, 0, 1, 3][((data as usize).max(2) - 2) % 4];
+    Model::solid(Boxes::of(&[plate((facing + 2) % 4, 2)]))
+}
+
+/// A lever (data bits 0-2: 0 and 7 on the ceiling, 1-4 on the east, west,
+/// south and north wall facing away from it, 5 and 6 on the floor; bit 3
+/// powered): a base plate and a short handle.
+fn lever(data: u8) -> Model {
+    let on = data & 8 != 0;
+    let boxes = match data & 7 {
+        // On a wall: the plate against the block behind, the handle up when on.
+        n @ 1..=4 => {
+            let facing = [3, 1, 0, 2][n as usize - 1];
+            let handle = if on { [7, 8, 2, 9, 14, 4] } else { [7, 2, 2, 9, 8, 4] };
+            [[5, 4, 0, 11, 12, 2], handle].map(|b| at_edge(b, (facing + 2) % 4))
+        }
+        // On the floor or ceiling: the handle leans one way or the other.
+        n => {
+            let lean = if on { 9 } else { 5 };
+            let handle = if n % 2 == 0 { [lean - 1, 2, 7, lean + 1, 10, 9] } else { [7, 2, lean - 1, 9, 10, lean + 1] };
+            let boxes = [[4, 0, 4, 12, 2, 12], handle];
+            if n == 0 || n == 7 { boxes.map(|[x0, y0, z0, x1, y1, z1]| [x0, 16 - y1, z0, x1, 16 - y0, z1]) } else { boxes }
+        }
+    };
+    Model::passable(Boxes::of(&boxes))
+}
+
+/// A button (data bits 0-2: 0 on the ceiling, 1 on the floor, 2-5 on a wall
+/// facing north, south, west, east; bit 3 pressed).
+fn button(data: u8) -> Model {
+    let depth = if data & 8 != 0 { 1 } else { 2 };
+    let b = match data & 7 {
+        0 => [5, 16 - depth, 6, 11, 16, 10],
+        1 => [5, 0, 6, 11, depth, 10],
+        n => at_edge([5, 6, 0, 11, 10, depth], ([2, 0, 1, 3][(n as usize - 2) % 4] + 2) % 4),
+    };
+    Model::passable(Boxes::of(&[b]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A block, `(id, data)`, at an offset.
+    type Placed = ((i32, i32, i32), (u8, u8));
+
+    /// A neighbourhood: blocks at the given offsets, air elsewhere.
+    fn around<const N: usize>(blocks: [Placed; N]) -> impl Fn(i32, i32, i32) -> (u8, u8) {
+        move |x, y, z| blocks.iter().find(|(p, _)| *p == (x, y, z)).map_or((0, 0), |&(_, b)| b)
+    }
+
+    #[test]
+    fn a_closed_door_is_a_plate_on_the_side_opposite_its_facing() {
+        // Lower half, facing east (0), closed; the upper half is above it.
+        let above = around([((0, 1, 0), (64, 8))]);
+        let lower = model(64, 0, &above);
+        assert_eq!(&*lower.visual, &[[0, 0, 0, 3, 16, 16]]);
+        assert_eq!(lower.collision, lower.visual);
+        // Facing south (1) is on the north side; the upper half draws the same.
+        let below = around([((0, -1, 0), (64, 1))]);
+        assert_eq!(&*model(64, 8, &below).visual, &[[0, 0, 0, 16, 16, 3]]);
+    }
+
+    #[test]
+    fn an_open_door_swings_to_the_side_of_its_hinge() {
+        // Open (4), facing east; the hinge is in the upper half's bit 0.
+        let left = around([((0, 1, 0), (64, 8))]);
+        let right = around([((0, 1, 0), (64, 9))]);
+        assert_eq!(&*model(64, 4, &left).visual, &[[0, 0, 0, 16, 16, 3]]);
+        assert_eq!(&*model(64, 4, &right).visual, &[[0, 0, 13, 16, 16, 16]]);
+        assert_eq!(&*model(64, 4, &right).collision, &[[0, 0, 13, 16, 16, 16]]);
+    }
+
+    #[test]
+    fn upside_down_stairs_are_a_top_slab_with_the_step_below_it() {
+        // Rising east (0) and upside down (4), with nothing around.
+        let m = model(53, 4, &around([]));
+        assert_eq!(&*m.visual, &[[0, 8, 0, 16, 16, 16], [8, 0, 0, 16, 8, 16]]);
+        let upright = model(53, 0, &around([]));
+        assert_eq!(&*upright.visual, &[[0, 0, 0, 16, 8, 16], [8, 8, 0, 16, 16, 16]]);
+    }
+
+    #[test]
+    fn stairs_turn_corners_next_to_crossing_stairs() {
+        // Rising east with a stair to the east that rises north: an outer
+        // corner, whose step is the north-east quarter.
+        let outer = model(53, 0, &around([((1, 0, 0), (53, 3))]));
+        assert_eq!(&*outer.visual, &[[0, 0, 0, 16, 8, 16], [8, 8, 0, 16, 16, 8]]);
+        // With that stair to the west instead: an inner corner, the whole
+        // east step plus the north-west quarter.
+        let inner = model(53, 0, &around([((-1, 0, 0), (53, 3))]));
+        assert_eq!(&*inner.visual, &[[0, 0, 0, 16, 8, 16], [8, 8, 0, 16, 16, 16], [0, 8, 0, 8, 16, 8]]);
+    }
+
+    #[test]
+    fn fences_walls_and_panes_connect_to_neighbours() {
+        let fence = |near: &dyn Fn(i32, i32, i32) -> (u8, u8)| model(85, 0, near);
+        let lone = fence(&around([]));
+        assert_eq!(&*lone.visual, &[[6, 0, 6, 10, 16, 10]]);
+        assert_eq!(&*lone.collision, &[[6, 0, 6, 10, 24, 10]]);
+        // A fence to the east and stone to the north: two arms of two rails.
+        let m = fence(&around([((1, 0, 0), (85, 0)), ((0, 0, -1), (1, 0))]));
+        assert_eq!(m.visual.len(), 5);
+        assert!(m.visual.contains(&[10, 6, 7, 16, 9, 9]), "{:?}", &*m.visual);
+        assert!(m.visual.contains(&[7, 12, 0, 9, 15, 6]), "{:?}", &*m.visual);
+        // Nether brick fences ignore wooden ones; walls join walls only.
+        assert_eq!(model(113, 0, &around([((1, 0, 0), (85, 0))])).visual.len(), 1);
+        assert_eq!(model(139, 0, &around([((1, 0, 0), (139, 0)), ((-1, 0, 0), (139, 0))])).visual.len(), 2);
+        // Panes join panes and glass.
+        let pane = model(102, 0, &around([((0, 0, 1), (160, 3)), ((0, 0, -1), (20, 0))]));
+        assert_eq!(&*pane.visual, &[[7, 0, 7, 9, 16, 9], [7, 0, 9, 9, 16, 16], [7, 0, 0, 9, 16, 7]]);
+    }
+
+    #[test]
+    fn gates_open_and_fold_into_walls() {
+        let near = around([]);
+        assert_eq!(&*model(107, 0, &near).collision, &[[0, 0, 6, 16, 24, 10]]);
+        assert_eq!(&*model(107, 1, &near).collision, &[[6, 0, 0, 10, 24, 16]]);
+        assert!(model(107, 4, &near).collision.is_empty(), "an open gate can be walked through");
+        assert!(!model(107, 4, &near).visual.is_empty());
+        let between_walls = around([((-1, 0, 0), (139, 0)), ((1, 0, 0), (139, 0))]);
+        assert_eq!(model(107, 0, &between_walls).visual[0], [0, 2, 7, 2, 13, 9]);
+    }
+
+    #[test]
+    fn trapdoors_lie_on_the_floor_or_ceiling_and_stand_open_on_their_wall() {
+        let near = around([]);
+        assert_eq!(&*model(96, 0, &near).visual, &[[0, 0, 0, 16, 3, 16]]);
+        assert_eq!(&*model(96, 4, &near).visual, &[[0, 13, 0, 16, 16, 16]]);
+        // Open, facing east: it hangs on the west.
+        assert_eq!(&*model(96, 8, &near).visual, &[[0, 0, 0, 3, 16, 16]]);
+    }
+
+    #[test]
+    fn small_attachments_have_no_collision() {
+        let near = around([]);
+        for (id, data) in [(63, 0), (68, 3), (69, 1), (77, 5), (143, 2 | 8)] {
+            let m = model(id, data, &near);
+            assert!(!m.visual.is_empty() && m.collision.is_empty(), "{id}:{data}");
+        }
+        // A ladder on a wall is a plate against the block behind it.
+        assert_eq!(&*model(65, 2, &near).visual, &[[0, 0, 14, 16, 16, 16]]);
+    }
+
+    #[test]
+    fn every_box_list_stays_inside_its_block() {
+        let neighbours = [(0, 0), (1, 0), (85, 0), (139, 0), (102, 0), (53, 0), (53, 5), (64, 8), (107, 1)];
+        for id in 0..=255u8 {
+            for data in 0..16u8 {
+                for n in neighbours {
+                    let near = |dx: i32, _: i32, dz: i32| if (dx + dz) % 2 != 0 { n } else { (0, 0) };
+                    let m = model(id, data, &near);
+                    assert_eq!(look(id, data).shape == Shape::Boxes, !m.visual.is_empty(), "{id}:{data}");
+                    for b in m.visual.iter().chain(m.collision.iter()) {
+                        assert!((0..3).all(|a| b[a] < b[a + 3]), "{id}:{data} {b:?} is empty");
+                        assert!(b[0] <= 16 && b[3] <= 16 && b[2] <= 16 && b[5] <= 16 && b[4] <= 24, "{id}:{data} {b:?}");
+                        assert!(m.visual.iter().all(|b| b[4] <= 16), "{id}:{data}");
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn every_block_in_the_sample_world_has_a_real_look() {
