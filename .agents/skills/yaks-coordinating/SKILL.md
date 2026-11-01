@@ -2,8 +2,8 @@
 name: yaks-coordinating
 description: "Use when you will hand yaks to other agents or land their work: coordinating several agents and a human over one yaks farm (claim, brief, fan out, land, reconcile), in Delta threads or plain git worktrees."
 metadata:
-  yaks-version: "0.0.27"
-  yaks-digest: "369f0c8993e4cdab"
+  yaks-version: "0.0.28"
+  yaks-digest: "a74ac0456ba12e79"
 ---
 
 # Coordinating yaks
@@ -18,7 +18,7 @@ You are the **yakherd**: the one agent that claims yaks, briefs workers, lands t
 
 - Claims, notes, shears and asks are visible to everyone the moment they are written. There is no yak state to merge and nothing under `.yaks/` in any code commit.
 - **You commit the farm** (`yaks commit`), at least at every landing. **You sync it** (`yaks sync`) at session start, after landings and before a machine switch. On a machine nobody is sitting at (a cloud runner, a VM), also sync at every check-in on your workers: the human sees nothing until you do, and a reset of that machine deletes every unsynced write. Until the human has published the farm (`yaks status` shows no upstream), use `yaks sync --no-push`: the first push creates the remote branch.
-- **Names are identity.** Every worker writes under its own short `YAKS_ACTOR` (the brief sets it), and so should you: `yaks sheds` groups work by that name, and a name that changes mid-session splits one worker into two.
+- **Names are identity.** Every worker writes under its own name (the brief sets it, and tells the worker to `yaks whoami --set` it), and so should you, once, with `yaks whoami --set <name>`: `yaks sheds` groups work by that name, and later readers trace who did what by it. A name that changes mid-session splits one worker into two; one reused by two threads merges them. So make names specific and fresh: `herd-<topic>` for yourself, never a bare `herd`; a new number for a replacement worker (`door-3`, not the dead `door-2`). `yaks brief --as` warns when a name is already in the farm.
 - Workers find the farm by themselves: from a git worktree or a Delta clone, discovery reads the host repo's farm branch (and its `yaks.farm`, when the repo shares another's farm). No `YAKS_DIR` needed.
 - Yak ids are fine in commit messages. On a **private farm** (`yaks private`) keep yak ids out of commits, code, comments and PRs (`yaks scan-ids` checks text; `yaks brief` says so), and land with `yaks land <sha> --yak <id>` so the landed SHA is recorded on the yak: it is the only link from the yak to its code.
 
@@ -27,7 +27,7 @@ You are the **yakherd**: the one agent that claims yaks, briefs workers, lands t
 1. **Claim.** Create or pick the leaf yaks, `yaks shave` each, and write a claim note: owner name, scope by file and symbol, out of scope, evidence contract, judge (section 4).
 2. **Fan out.** One worker per yak, each from your freshest state, each with a brief (section 5).
 3. **Land.** Only you land, one worker at a time, by the SHA in its final message, then check it (section 6).
-4. **Reconcile.** A yak still `shaving` after the batch is stalled: `regrow` it or re-run it. `yaks doctor`, `yaks commit`.
+4. **Reconcile.** A yak still `shaving` after the batch is stalled: `regrow` it or re-run it. Shear the umbrella once every child is shorn or dead; a child that isn't done graduates out first (the `yaks` skill's "Families"). `yaks doctor`, `yaks commit`.
 
 **Watching workers.** `yaks log --by <worker> --since 1h` and `yaks inbox` show their notes and asks live. `yaks sheds` lists everyone writing to the farm, one row per actor name, on any machine once synced: what each is shaving, what it touched recently, its open asks, its latest checkpoint branch, and when it last wrote: `active` (wrote in the last 2 hours), `stale` (holds a claim but has written nothing for 2 hours), else `idle`. With heartbeat notes, that tells a slow worker from a dead one.
 
@@ -74,7 +74,7 @@ Pass `--yaks-dir <farm>` when the worker's checkout cannot find the farm. If the
 
 ## 8. Attribution and drift
 
-Every note and move carries an actor: `--as <name>` or `YAKS_ACTOR=<name>` on each command (else a Delta thread name, else the git user, which is the human). A move is not evidence; a shorn yak still needs a real note. The human edits yaks while you work: a yak that moved or gained a note is a person beside you, not an error; follow it if it changes your task.
+Every note and move carries an actor: `--as <name>` or `YAKS_ACTOR=<name>` on each command, else the checkout's `yaks whoami --set` name, else a name derived from the Delta thread title (its leading `<name>:` when it has one), else the git user, which is the human. Moves made in a harness thread also record its `thread:` id. A move is not evidence; a shorn yak still needs a real note. The human edits yaks while you work: a yak that moved or gained a note is a person beside you, not an error; follow it if it changes your task.
 
 ## 9. In Delta
 
@@ -96,3 +96,13 @@ Your thread is the yakherd; each worker is a subthread with its own clone, which
 - **Each worktree builds and tests its own binary.**
 - **Serial arc** (phases that edit the same files in order): keep one worktree for the arc, land each phase to main as it completes, then `git merge main` back into it.
 - **Recovery:** a lost session is not lost work. `git -C wt/<name> status` and `diff`, build that worktree, then finish it yourself or discard and re-run.
+
+## 11. On a machine nobody is sitting at (a cloud runner, a VM)
+
+- **Expect wipes.** Often only the harness's worktree survives a reset: tools, caches, other checkouts and running workers are gone, with no final message. Keep a setup script in the repo that restores the toolchain in minutes, and run it detached. Sync the farm after every claim, landing and check-in, so a wipe loses no yak state, and so the human sees your workers' notes: they reach other machines only when you sync. (`yaks sheds` shows when the upstream last changed; a long gap there reads as idle workers.)
+- **Dead workers.** A worker whose latest note is over an hour old, or older than the machine's last boot, is dead. Brief a replacement under a **new** name (`door-3`, not `door-2`), and have it start from the dead one's notes and pushed branch.
+- **Long jobs.** Launch a build detached (`setsid nohup sh job.sh > log 2>&1 < /dev/null &`) and **confirm it started in the same call** (`sleep 2; test -s log || echo NOT STARTED`); then poll its log in calls of at most about 10 minutes. Some harnesses end a call's processes before a backgrounded command runs, so a launch that returns at once may have done nothing: never poll a log you haven't seen appear.
+- **Budget by disk and CPU, not by yak count.** One Rust checkout's build directory can be 10 GB. Count what fits before fanning out, and delete a landed worker's checkout and build directory.
+- **Re-verify when the machine is quiet.** Timing-sensitive evidence (browser checks, benchmarks) fails under load from other workers' builds. Re-run it after they finish, with the exact command and environment the worker recorded. Require that record in the brief.
+- **Name the off-limits paths.** Your own checkout is the obvious "repo" path on such a machine. The brief says which path is yours and never to edit it; the worker works only in its own `git rev-parse --show-toplevel`.
+- **No thread tools there.** Liveness may come from note age alone, so hold workers to the note cadence.
