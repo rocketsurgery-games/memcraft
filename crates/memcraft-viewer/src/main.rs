@@ -8,6 +8,7 @@
 //! left click to break the block in the crosshair, right click to place one.
 
 mod blocks;
+mod buttons;
 mod catalog;
 mod controls;
 mod hotbar;
@@ -51,7 +52,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, menu::MenuPlugin))
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)

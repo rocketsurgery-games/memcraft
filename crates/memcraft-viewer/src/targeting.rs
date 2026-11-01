@@ -13,6 +13,7 @@ use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
 
 use crate::blocks::{self, Shape};
+use crate::buttons::{press_ticks, PendingReleases, POWERED};
 use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
 use crate::interact::interact;
@@ -152,7 +153,7 @@ fn can_place(existing: Block, block: Block, cell: IVec3, player: (Vec3, Vec3)) -
 }
 
 /// Clicks: the left button breaks the targeted block, the right one uses it
-/// (a door opens, say) or, if it does nothing, places a block against it.
+/// (a door opens, a lever flips, a button goes down) or, if it does nothing, places a block against it.
 fn edit_blocks(
     mouse: Res<ButtonInput<MouseButton>>,
     cursor: Single<&CursorOptions, With<PrimaryWindow>>,
@@ -160,6 +161,7 @@ fn edit_blocks(
     hotbar: Res<Hotbar>,
     mut map: ResMut<WorldMap>,
     mut solids: ResMut<Solids>,
+    mut pending: ResMut<PendingReleases>,
     camera: Single<(&Transform, &Controller)>,
 ) {
     let Some(hit) = target.0.filter(|_| is_locked(&cursor)) else {
@@ -179,6 +181,10 @@ fn edit_blocks(
                 if world::set_block(&mut map, &mut solids, p.x, p.y, p.z, id, data) {
                     info!("toggled {target:?} at {b}: {p} is now {:?}", (id, data));
                 }
+            }
+            // A button that went down pops up again later.
+            if let Some(ticks) = press_ticks(target.0).filter(|_| target.1 & POWERED == 0) {
+                pending.press(b, ticks);
             }
             return;
         }

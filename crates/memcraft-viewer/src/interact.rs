@@ -8,6 +8,7 @@
 
 use bevy::prelude::*;
 
+use crate::buttons::{press_ticks, POWERED};
 use crate::hotbar::Block;
 
 /// Doors: wooden (64, 193..=197) and iron (71).
@@ -25,6 +26,11 @@ fn is_gate(id: u8) -> bool {
     matches!(id, 107 | 183..=187)
 }
 
+/// Levers (69).
+fn is_lever(id: u8) -> bool {
+    id == 69
+}
+
 /// Bit 3 of a door's data marks its upper half.
 const DOOR_UPPER: u8 = 8;
 
@@ -36,6 +42,8 @@ const DOOR_UPPER: u8 = 8;
 /// A door's open bit (4) lives in its lower half only (the upper half holds
 /// the hinge, as `blocks` draws them), so a click on either half flips the
 /// lower one. Trapdoors flip bit 8 and gates bit 4 of the block itself.
+/// Levers flip their powered bit; a button sets it, and ignores the click
+/// while it is down (`buttons` pops it back up).
 pub fn interact(block: Block, pos: IVec3, at: impl Fn(IVec3) -> Block) -> Option<Vec<(IVec3, Block)>> {
     let (id, data) = block;
     if is_trapdoor(id) {
@@ -43,6 +51,12 @@ pub fn interact(block: Block, pos: IVec3, at: impl Fn(IVec3) -> Block) -> Option
     }
     if is_gate(id) {
         return Some(vec![(pos, (id, data ^ 4))]);
+    }
+    if is_lever(id) {
+        return Some(vec![(pos, (id, data ^ POWERED))]);
+    }
+    if press_ticks(id).is_some() {
+        return Some(if data & POWERED == 0 { vec![(pos, (id, data | POWERED))] } else { vec![] });
     }
     if !is_door(id) {
         return None;
@@ -118,6 +132,55 @@ mod tests {
     }
 
     #[test]
+    fn a_lever_flips_its_powered_bit_whatever_it_is_mounted_on() {
+        for data in 0..8 {
+            let p = IVec3::new(2, 70, 2);
+            let mut w = HashMap::from([(p, (69, data))]);
+            assert!(click(&mut w, p));
+            assert_eq!(w[&p], (69, data | 8), "lever {data} switched on");
+            assert!(click(&mut w, p));
+            assert_eq!(w[&p], (69, data), "lever {data} switched off");
+        }
+        let p = IVec3::ZERO;
+        let mut w = HashMap::from([(p, (69, 5 | 8)), (p + IVec3::X, (69, 1))]);
+        click(&mut w, p);
+        assert_eq!(w[&(p + IVec3::X)], (69, 1), "a neighbouring lever is untouched");
+    }
+
+    #[test]
+    fn a_button_is_pressed_by_a_click_and_ignores_clicks_while_down() {
+        for (id, data) in [(77, 1), (77, 4), (143, 0), (143, 5)] {
+            let p = IVec3::new(2, 70, 2);
+            let mut w = HashMap::from([(p, (id, data))]);
+            assert!(click(&mut w, p));
+            assert_eq!(w[&p], (id, data | 8), "{id}:{data} pressed");
+            // Down: the click is swallowed (it neither places nor extends the press).
+            assert!(click(&mut w, p));
+            assert_eq!(w[&p], (id, data | 8), "{id}:{data} still pressed");
+        }
+    }
+
+    #[test]
+    fn a_pressed_button_pops_back_up_after_its_delay() {
+        use crate::buttons::{released, PendingReleases};
+        for (id, ticks, seconds) in [(77u8, 20, 1.0f32), (143, 30, 1.5)] {
+            let p = IVec3::new(2, 70, 2);
+            let mut w = HashMap::from([(p, (id, 3))]);
+            let mut pending = PendingReleases::default();
+            // What `targeting` does around a click.
+            click(&mut w, p);
+            pending.press(p, press_ticks(id).unwrap());
+            assert_eq!(press_ticks(id), Some(ticks));
+            assert!(pending.advance(seconds - 0.1).is_empty(), "{id} is still down at {}s", seconds - 0.1);
+            assert_eq!(w[&p], (id, 3 | 8));
+            for q in pending.advance(0.1) {
+                w.insert(q, released(w[&q]).unwrap());
+            }
+            assert_eq!(w[&p], (id, 3), "{id} is back up after {seconds}s");
+        }
+    }
+
+    #[test]
     fn other_blocks_do_not_react_so_the_click_places() {
         for id in [0, 1, 17, 20, 50, 53, 65, 85, 101, 113, 139, 188] {
             let p = IVec3::ZERO;
@@ -135,7 +198,8 @@ mod tests {
             let shaped = |data| blocks::look(id, data).shape == blocks::Shape::Boxes && !blocks::model(id, data, &near).visual.is_empty();
             let reacts = interact((id, 0), IVec3::ZERO, |_| (id, 0)).is_some();
             let is_openable = matches!(id, 64 | 71 | 193..=197 | 96 | 167 | 107 | 183..=187);
-            assert_eq!(reacts, is_openable, "{id}");
+            // Levers and buttons react too, but are not doors (see their own test).
+            assert_eq!(reacts, is_openable || matches!(id, 69 | 77 | 143), "{id}");
             if is_openable {
                 assert!(shaped(0), "{id} is drawn from boxes");
             }
