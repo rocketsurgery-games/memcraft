@@ -1,95 +1,112 @@
 ---
-name: yaks-coordinating
-description: "Use when you will hand yaks to other agents or land their work: coordinating several agents and a human over one yaks farm (claim, brief, fan out, land, reconcile), in Delta threads or plain git worktrees. Opt-in skill, installed by `yaks skills install --with coordination`."
+name: yaks-tracker
+description: Relate yaks to external issue trackers (Jira, Linear, GitHub Issues) as a one-way projection. Use when seeding a yak from an external issue or URL, finding which external issues a set of yaks rolls up to (or which keys to put in a PR), drafting/posting a status update to an external ticket from a bucket of yaks, or when asked to "sync" yaks with an external tracker (there is no bidirectional sync — route to the projection).
 metadata:
-  yaks-version: "0.0.24"
-  yaks-digest: "e550e07b58b7c7eb"
+  yaks-version: "0.0.27"
+  yaks-digest: "2215f1f4f2f97ead"
 ---
 
-# Coordinating yaks
+# Yak ↔ external tracker — one-way projection
 
-You are the **yakherd**: the one agent that claims yaks, briefs workers, lands their work and talks to the human. A **worker** owns exactly one yak and follows `yaks-working`. One agent with no helpers needs only `yaks-working`.
+Yaks are a **private, fine-grained, fast** layer; external trackers (Jira,
+Linear, GitHub Issues) are a **shared, coarse, slow** layer. The relationship is
+a **one-way projection, not synchronization**:
 
-**The design test.** If something is a query or mutation over the task files, it belongs in the yaks tool; if it assumes subagents, worktrees or an orchestration, it belongs here. With one agent yaks is memory and a log; with many it is a shared blackboard.
+- **Many yaks roll up to few external issues.** A whole subtree of yaks can map
+  to a single ticket.
+- **The pointer runs yak → external only.** Each yak stores the issue URL in its
+  `source:` field; the external issue holds no reference back.
+- **The external tracker never knows yaks exist.** There is no shared state, no
+  field merge, nothing to reconcile — so there is no bidirectional "sync" to
+  offer. If a user asks to sync, explain the projection and do the rollup or
+  import instead.
 
-## 1. The farm everyone shares
+**Keep the farm private when a tracker is in play.** The tracker is the shared,
+coarse layer; yaks are the private layer beneath it. Publishing the farm on a
+repo that *also* has an external tracker means two competing shared layers —
+discouraged. Run `yaks private` (see the `yaks` skill, "Where the farm lives"),
+and keep yak ids out of commit messages. The shared link is then PR↔issue via
+`rollup --keys`, and the yak's own notes carry the rest.
 
-`yaks path` (no arguments) prints the farm: its branch's worktree, one per machine, which every checkout (yours, the human's, each worker's) reads and writes live. So:
+**Consolidated farms (multiple herds).** A single private farm can hold several
+herds (id prefixes), one per project (see the `yaks` skill). Herds commonly map
+to *different* upstream trackers — e.g. a `web` herd → GitHub Issues, an `api`
+herd → Jira. Nothing here changes: `source:` is per-yak and `rollup` groups by
+it regardless of herd, so a rollup naturally splits along trackers. Scope a
+rollup to one project's herd with `--herd`, e.g. `yaks rollup --keys --herd web`.
 
-- Claims, notes, shears and asks are visible to everyone the moment they are written. There is no yak state to merge and nothing under `.yaks/` in any code commit.
-- **You commit the farm** (`yaks commit`), at least at every landing. **You sync it** (`yaks sync`) at session start, after landings and before a machine switch. Until the human has published the farm (`yaks status` shows no upstream), use `yaks sync --no-push`: the first push creates the remote branch.
-- Workers find the farm by themselves: from a git worktree or a Delta clone, discovery reads the host repo's farm branch (and its `yaks.farm`, when the repo shares another's farm). No `YAKS_DIR` needed.
-- Yak ids are fine in commit messages. On a **private farm** (`yaks private`) keep yak ids out of commits, code, comments and PRs (`yaks scan-ids` checks text; `yaks brief` says so), and after landing note the landed SHA on the yak, since git cannot link it.
+This skill covers the three things that need judgment; the rollup itself is just
+a CLI command.
 
-## 2. The shape: claim, fan out, land, reconcile
+## Hard rules
 
-1. **Claim.** Create or pick the leaf yaks, `yaks shave` each, and write a claim note: owner name, scope by file and symbol, out of scope, evidence contract, judge (section 4).
-2. **Fan out.** One worker per yak, each from your freshest state, each with a brief (section 5).
-3. **Land.** Only you land, one worker at a time, by the SHA in its final message, then check it (section 6).
-4. **Reconcile.** A yak still `shaving` after the batch is stalled: `regrow` it or re-run it. `yaks doctor`, `yaks commit`.
+- **Never write to the external tracker without explicit confirmation.** Drafting
+  a comment or ticket edit is fine; *posting* it requires a yes, every time.
+- **Never annotate upstream content with yak-specific markers** (`[yaks:…]`, yak
+  IDs, etc.). The user may work in a shared tracker where yaks are private. (This
+  mirrors the `yaks` skill's "keep yaks private" rule — treat it as firm.)
+- **Never create an upstream issue automatically.** Ask where first
+  (project/team/repo).
+- **Stop and tell the user** if the tracker tool you'd need isn't connected.
 
-**Watching workers.** `yaks log --by <worker> --since 1h` and `yaks inbox` show their notes and asks live. `yaks sheds` lists every checkout with its git facts (branch, ahead/behind, dirty files, merged) and the yaks it wrote, newest first, with when it last wrote: that tells a slow worker from a dead one.
+## 1. Rollup (read-only) — which issues do these yaks touch?
 
-## 3. Scope work so it cannot collide
-
-- **One writer per yak.** Never edit a yak a worker owns while it runs; summarize onto the parent yourself afterwards. Shared work gets split into child yaks first.
-- **Types, not only files.** A change to a shared type (a struct built in many places) breaks the other workers at merge: land it first as your own prep commit. Scan with `grep 'TypeName {'`.
-- **One big file?** Give each worker a disjoint function or region, anchor by symbol (`fn name`), never by line number, and warn that a shared render path can ripple into snapshots.
-
-## 4. Evidence contract and judge
-
-The claim note says what counts as done and who decides, and the judge shears: a script (the yak's `verify:` or the config default; the worker shears on PASS and you re-run it), the human for a subjective call (`yaks ask`), or you at landing. If you cannot say what the evidence is, the lever is missing: ask the human about building one before you fan out.
-
-## 5. The brief
-
-`yaks brief <id> --as <name>` prints everything the yak, config and farm determine: the yak and that it is shaving, the `YAKS_ACTOR=<name>` prefix (and `YAKS_DIR` if you pass `--yaks-dir`), the binary, the gate, forbidden moves, how to finish for this farm, how to ask and pick up, the `Decision:` rule and the final-message format. It warns if the yak is not claimed. Add only what a yak cannot know:
+A plain CLI command, no external tool needed:
 
 ```
-<output of `yaks brief <id> --as <name>`>
-Task: <what and what not>. Scope by symbol: <files, functions>. Out of scope: everything else;
-if you must touch another file, `yaks ask` instead.
-Evidence beyond the gate: <the test that fails before and passes after>.
-Do not read, write or build in any other checkout.
+yaks rollup [filters]        # group yaks by the external issue they point at
+yaks rollup --keys [filters] # just the distinct keys, for pasting into a PR body
 ```
 
-Pass `--yaks-dir <farm>` when the worker's checkout cannot find the farm. If the task changes yaks itself, tell the worker to build and use its own binary.
+A yak with no own `source:` inherits the nearest ancestor's, so stamping one
+`source:` on an umbrella yak covers its whole subtree. Scope with the usual
+filters (`--label github`, `--status shaving`, `--parent-of yak-abcd`).
 
-## 6. Landing
+**PR-key helper:** before opening a PR, run `yaks rollup --keys` over the shipping
+set and paste the key(s) into the PR description. The forge (GitHub/Jira) makes
+the PR↔issue link natively — never write yak IDs anywhere upstream.
 
-1. **Land by SHA:** `yaks land <sha> --dry-run`, then `yaks land <sha>`. It lands one single-parent squash commit (or a cherry-pick when the base moved), checks the result against `git merge-tree`, and never pushes. It refuses while your tree has changes the commit does not explain, a SHA whose change a merge dropped, and a commit that stages `.yaks/` beside a branch farm.
-2. **Re-run the gate yourself** and reproduce the key scenario with your own build. A claim you cannot reproduce is rejected, not annotated: `git revert` the landing and regrow the yak.
-3. **Read the diff** for quality and for every surface the change touches (docs, skills, README, `--help`, in-app help); make fixes as your own follow-up commits.
-4. `yaks doctor`, then `yaks commit`. Never write a claim into a yak that you did not observe.
+## 2. Import-once — seed a yak from an external issue
 
-## 7. Asks
+When the user points at an external issue and wants a yak (or a group) for it:
 
-- A worker that needs a decision runs `yaks ask`, leaves its edits and returns.
-- **Scope and mechanics** (reversible, local to the yak's goal: one more file, which test shape): answer it yourself with `yaks answer <id> --note "..."`, saying you are the yakherd, then wake the worker. The answer is the record; the message is only the wake-up.
-- **A design fork** (behavior a user sees, a data format, a dependency, a shipped surface, anything a reviewer would want a say in; if unsure, it is a fork): leave the ask open, and tell the human the yak id and your lean (record the lean on the parent yak, never the worker's). Wake the worker once `yaks inbox` shows it answered (`yaks wait --for agent --new --timeout <dur>` blocks until it is, if your harness can run it in the background).
-- **Waiting on workers' asks:** `yaks wait --for human --new --timeout <dur>` returns when a worker raises a new ask.
-- **Handing a chore to an agent** with no worker running (tidy a body, summarize a yak): `yaks request <id> --kind tidy|summarize` (or `--note "..."` for anything else) queues it in the agent inbox for whichever agent runs next. In bulk: `yaks bulk --run-on --request tidy` previews and `--commit` queues (a yak awaiting a human is skipped).
-- At session start and after each batch, run `yaks inbox`. A yak marked `replied` got a plain-note answer: record it with `yaks answer`, quoting the human and saying you read it from their note.
+1. Fetch the issue's title/description via whatever tracker tool is connected
+   (see read hints below). Flatten to markdown if needed.
+2. Create or update the yak(s), recording the issue URL as `source:`:
+   `yaks create "…" --source <url>` (or `yaks update <id> --source <url>`).
+   For a group, stamp `source:` on the umbrella yak; children inherit it.
+   The pull requests that implement it are a separate list, `prs:`
+   (`yaks update <id> --pr <url>`, repeatable; `--remove-pr` when one closes).
+3. **Label by tracker.** Add a label named for the tracker (`jira`, `github`,
+   `linear`) so the upstreamed yaks are easy to find later
+   (`yaks list --label jira`): `yaks create … --labels jira` /
+   `yaks update <id> --add-label github`. Deriving the label from the tracker
+   name keeps the taxonomy small and predictable (see the `yaks` skill's label
+   guidance).
+4. **Stop tracking.** This is "import once, then diverge" — there is no
+   watermark, no later drift check. Don't promise to keep them in sync.
 
-## 8. Attribution and drift
+## 3. Outbound draft — status update from a bucket of yaks
 
-Every note and move carries an actor: `--as <name>` or `YAKS_ACTOR=<name>` on each command (else a Delta thread name, else the git user, which is the human). A move is not evidence; a shorn yak still needs a real note. The human edits yaks while you work: a yak that moved or gained a note is a person beside you, not an error; follow it if it changes your task.
+When a bucket of work is done and the user wants to update the external ticket:
 
-## 9. In Delta
+1. Use `yaks rollup` (and the yak bodies) to gather what shipped under each key.
+2. **Compose** a concise status update / suggested ticket edit, in plain prose —
+   no yak IDs, no `[yaks:…]` markers.
+3. Deliver one of two ways:
+   - hand the text to the user to paste, **or**
+   - if a tracker write tool is connected, offer to post it directly — and only
+     post **after explicit confirmation**.
 
-Your thread is the yakherd; each worker is a subthread with its own clone, which starts from a snapshot of your working tree.
+## Per-tracker read hints
 
-- **Spawning.** Start each title with the worker's name (`sheds-1: build the sheds CLI`): Delta exports it, and yaks names the worker's notes and its row in `yaks sheds` after it. Record the worker's name, agent id, model and base commit on the umbrella yak or in your landing note, never on the worker's yak. Pass `model` only when the human asked for one.
-- **What comes back is not trustworthy.** Delta merges a result against what it last applied to your tree, not your HEAD: expect a pending `MERGE_HEAD`, stray modified files, a worker's unfinished edits, even files reset to an old snapshot. Never `git add -A` after a worker returns and never hand-revert Delta's applied state; `yaks land <sha>` sorts it out. While any worker is running or parked, don't rewrite your branch (no `reset --hard`, no rebase): its old base turns the next landing into add/add conflicts.
-- **Waking a worker.** `send_agent_message` to its thread id; it resumes with its context. Tell it to `yaks pickup <id>` when an answer is waiting.
-- **A worker can die silently** (most often when the human moves the thread to another machine). Overdue with no new note and no growing dirty count in `yaks sheds`: presume it dead, have a replacement review its draft, and after two deaths finish the task yourself.
-- **Landing in the human's checkout.** Thread commits reach the human's repo on no branch; `main` moves only by your `git push local <branch>:main`. First run `yaks preflight --push-main` (on a shared machine `local` can be a bare repo the human never looks at; it then names the fallback). Never push `origin` or open a PR without the human's say-so.
-- **On another machine,** `local` is that machine's checkout and may be behind: `git fetch origin`, check `yaks preflight --push-main`, and fast-forward it with `git push local origin/main:main`. Then `yaks sync`.
-- Project skills load only from real files in `.agents/skills/`; the `skill` tool needs the worktree argument. Still put the critical rules in the brief.
+Only the read path matters (import, drafting). The agent uses whatever is
+connected; these are conveniences.
 
-## 10. With git worktrees
-
-- **Cut a shed** from your freshest commit: `git worktree add wt/<name> -b <branch>`, in a directory that is not gitignored (some harnesses' file tools refuse ignored paths). Stage explicit paths; never `git add .`. `git worktree remove` it afterwards.
-- **File tools rooted at the main checkout:** always edit through the explicit worktree path (`wt/<name>/src/foo.rs`); a bare `src/foo.rs` silently edits the main tree. After edits, `git -C <main> status --short` must show no stray source changes.
-- **Each shed builds and tests its own binary.**
-- **Serial arc** (phases that edit the same files in order): keep one shed for the arc, land each phase to main as it completes, then `git merge main` back into the shed.
-- **Recovery:** a lost session is not lost work. `git -C wt/<name> status` and `diff`, build that shed, then finish it yourself or discard and re-run.
+- **Jira (Atlassian MCP):** `getJiraIssue` returns fields + comments + attachment
+  metadata in one call. Description is ADF — flatten to markdown when seeding.
+  To draft back: `addCommentToJiraIssue` / `editJiraIssue` (confirmation-gated).
+- **Linear (MCP):** `get_issue` + `list_comments` are separate calls.
+- **GitHub Issues (`gh` CLI):** `gh issue view <N> --repo <o/r> --json title,body,comments`
+  and `gh api repos/<o>/<r>/issues/<N>/comments`. To draft back:
+  `gh issue comment` / `gh issue edit` (text only; confirmation-gated).
