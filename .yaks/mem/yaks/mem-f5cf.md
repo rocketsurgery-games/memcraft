@@ -5,7 +5,7 @@ status: hairy
 type: feature
 priority: 3
 created: '2026-10-31T23:21:32Z'
-updated: '2026-11-01T15:33:27Z'
+updated: '2026-11-01T15:44:39Z'
 ---
 
 Initially, let's just focus on a manual save affordance in the menu (I guess we'll need a menu first!). Presumably we'd need some other serving mechanism to even be _able_ to save anything. We can explore that as well, but also preserve an "ephemeral" mode for read-only deployments with no server.
@@ -52,3 +52,8 @@ Answers recorded (herd): (1) write back into the PE LevelDB world (mem-a86b); (2
 ▸ 2026-11-01T15:33:27Z [delta:herd]
 
 delta:writer-1 on mem-a86b, thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtzhZIBxBBCaHaBp8ZDPqDsZufUZIx8, base 48ed523.
+
+---
+▸ 2026-11-01T15:44:39Z [delta:herd]
+
+delta:menu-1 on mem-d6f2 (game menu), thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADupIZIBxBBCaHaBp8ZDPqDsZufUZIx8, base 48ed523, started Sun Nov  1 15:44:39 UTC 2026.
