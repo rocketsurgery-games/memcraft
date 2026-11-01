@@ -85,7 +85,6 @@ impl Solids {
         (x * 16 + z) * HEIGHT + y
     }
 
-    #[allow(dead_code, reason = "used by block targeting and placing, next")]
     /// Follows a block edit. Positions outside the loaded world are ignored
     /// (they stay solid).
     pub fn set_block(&mut self, x: i32, y: i32, z: i32, id: u8, data: u8) {
