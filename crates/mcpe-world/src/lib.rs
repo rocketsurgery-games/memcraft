@@ -15,11 +15,39 @@
 //! The database is opened from an in-memory copy of its files, so the source
 //! world is never modified and the same code can run where there is no
 //! filesystem (WebAssembly).
+//!
+//! # Writing
+//!
+//! [`WorldWriter`] is the inverse: it opens the same in-memory copy for
+//! writing, [`put_column`](WorldWriter::put_column)s re-encoded columns as the
+//! records Pocket Edition reads (each column keeps the layout it was read in),
+//! and [`finish`](WorldWriter::finish)es into the files of a world, which can be
+//! written to a directory ([`SavedWorld::write_dir`]) or handed to a zip
+//! writer. `level.dat` and every record that is not re-put are left as they
+//! were.
+//!
+//! ```no_run
+//! # fn main() -> mcpe_world::Result<()> {
+//! use mcpe_world::{World, WorldWriter};
+//!
+//! let mut world = World::open_dir("worlds/My World")?;
+//! let col = world.columns.values_mut().next().unwrap();
+//! col.ids[mcpe_world::Column::index(0, 100, 0)] = 1; // a stone block
+//! col.recompute_heights();
+//!
+//! let mut writer = WorldWriter::open_dir("worlds/My World")?;
+//! writer.put_column(col)?;
+//! writer.finish()?.write_dir("saved/My World")?;
+//! # Ok(()) }
+//! ```
 
 mod db;
+mod encode;
 mod key;
+mod writer;
 
 pub use key::{ChunkPos, Dimension};
+pub use writer::{SavedWorld, WorldWriter};
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -84,7 +112,7 @@ pub enum TerrainFormat {
 ///
 /// Block arrays are indexed by [`Column::index`] (y fastest, then z, then x,
 /// the same order Pocket Edition used on disk).
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Column {
     pub pos: ChunkPos,
     pub format: TerrainFormat,
@@ -98,6 +126,13 @@ pub struct Column {
     pub block_light: Option<Vec<u8>>,
     /// Biome id per (x, z), indexed `z * 16 + x`.
     pub biomes: Option<[u8; 256]>,
+    /// Grass tint per (x, z), indexed `z * 16 + x`, as `0xRRGGBB`. Only
+    /// `LegacyTerrain` records store it, next to the biome id.
+    pub grass_colors: Option<[u32; 256]>,
+    /// Height per (x, z), indexed `z * 16 + x`: the y above the highest
+    /// non-air block. Kept as stored; [`Column::recompute_heights`] refreshes
+    /// it after editing blocks.
+    pub heights: Option<[u8; 256]>,
     /// Block entities (chests, signs, ...), Bedrock NBT.
     pub block_entities: Vec<Tag>,
     /// Entities (mobs, items, ...), Bedrock NBT.
@@ -116,6 +151,17 @@ impl Column {
         (self.ids[i], self.data[i])
     }
 
+    /// Sets [`heights`](Column::heights) from the blocks: per (x, z), the y
+    /// above the highest block that is not [`passes_sky_light`] (0 if none).
+    pub fn recompute_heights(&mut self) {
+        self.heights = Some(std::array::from_fn(|i| {
+            let (x, z) = (i % 16, i / 16);
+            let base = Column::index(x, 0, z);
+            let top = self.ids[base..base + HEIGHT].iter().rposition(|&id| !passes_sky_light(id));
+            top.map_or(0, |y| y as u8 + 1)
+        }));
+    }
+
     fn empty(pos: ChunkPos, format: TerrainFormat) -> Self {
         Column {
             pos,
@@ -125,6 +171,8 @@ impl Column {
             sky_light: None,
             block_light: None,
             biomes: None,
+            grass_colors: None,
+            heights: None,
             block_entities: Vec::new(),
             entities: Vec::new(),
         }
@@ -159,16 +207,7 @@ pub struct World {
 impl World {
     /// Loads a world directory (the one containing `level.dat` and `db/`).
     pub fn open_dir(dir: impl AsRef<Path>) -> Result<World> {
-        let dir = dir.as_ref();
-        let level_dat = std::fs::read(dir.join("level.dat"))?;
-        let mut db_files = Vec::new();
-        for entry in std::fs::read_dir(dir.join("db"))? {
-            let entry = entry?;
-            if entry.file_type()?.is_file() {
-                let name = entry.file_name().to_string_lossy().into_owned();
-                db_files.push((name, std::fs::read(entry.path())?));
-            }
-        }
+        let (level_dat, db_files) = read_world_dir(dir.as_ref())?;
         World::from_files(&level_dat, db_files)
     }
 
@@ -231,6 +270,40 @@ impl World {
     }
 }
 
+/// Whether a block id is ignored by the heightmap: air and the non-full
+/// blocks (glass, plants, rails, torches, stairs, slabs, fences, carpets, ...).
+/// Leaves, water, ice, cobweb, farmland and cauldrons count as ground.
+///
+/// Every id of the sample world agrees with the heights Pocket Edition stored
+/// there (a test checks all 256 columns); ids the sample lacks follow the same
+/// rule (Java's light opacity of zero) but are unchecked.
+fn passes_sky_light(id: u8) -> bool {
+    matches!(
+        id,
+        0 | 6 | 20 | 26..=28 | 31 | 32 | 34 | 36..=40 | 44 | 50 | 51 | 53..=55 | 59 | 60 | 63..=72
+            | 75..=78 | 83 | 85 | 90 | 92..=96 | 101 | 102 | 104..=109 | 111 | 113..=117 | 119 | 120 | 122
+            | 126..=128 | 130..=136 | 139..=151 | 154 | 156 | 160 | 163..=167 | 171 | 175..=177
+            | 182..=198 | 207
+    )
+}
+
+/// The files of a world's `db/` folder, by name.
+type DbFiles = Vec<(String, Vec<u8>)>;
+
+/// Reads `level.dat` and the files of `db/` from a world directory.
+fn read_world_dir(dir: &Path) -> Result<(Vec<u8>, DbFiles)> {
+    let level_dat = std::fs::read(dir.join("level.dat"))?;
+    let mut db_files = Vec::new();
+    for entry in std::fs::read_dir(dir.join("db"))? {
+        let entry = entry?;
+        if entry.file_type()?.is_file() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            db_files.push((name, std::fs::read(entry.path())?));
+        }
+    }
+    Ok((level_dat, db_files))
+}
+
 /// Parses `level.dat`: an 8-byte header (storage version, payload length,
 /// both little-endian i32) followed by a little-endian NBT compound.
 pub fn parse_level_dat(bytes: &[u8]) -> Result<(i32, Tag)> {
@@ -287,6 +360,10 @@ fn decode_column(pos: ChunkPos, recs: Vec<(key::ChunkTag, Vec<u8>)>) -> Result<O
         }
         if let Some(d) = data2d.filter(|d| d.len() >= 768) {
             // 256 little-endian i16 heights, then 256 biome ids.
+            c.heights = Some(std::array::from_fn(|i| {
+                let h = i16::from_le_bytes([d[i * 2], d[i * 2 + 1]]);
+                h.clamp(0, u8::MAX as i16) as u8
+            }));
             c.biomes = Some(d[512..768].try_into().unwrap());
         }
         col = Some(c);
@@ -311,10 +388,13 @@ fn decode_legacy_terrain(pos: ChunkPos, v: &[u8]) -> Column {
     unpack_nibbles(nib(2), &mut block);
     c.sky_light = Some(sky);
     c.block_light = Some(block);
+    c.heights = Some(v[n * 5 / 2..n * 5 / 2 + 256].try_into().unwrap());
     // After the 256-byte heightmap, one little-endian u32 per (x, z) column,
     // indexed z * 16 + x: biome id in the low byte, then the grass RGB tint.
     let biomes = &v[n * 5 / 2 + 256..];
-    c.biomes = Some(std::array::from_fn(|i| biomes[i * 4]));
+    let biome_word = |i: usize| u32::from_le_bytes(biomes[i * 4..i * 4 + 4].try_into().unwrap());
+    c.biomes = Some(std::array::from_fn(|i| biome_word(i) as u8));
+    c.grass_colors = Some(std::array::from_fn(|i| biome_word(i) >> 8));
     c
 }
 

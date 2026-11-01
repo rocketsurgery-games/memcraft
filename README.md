@@ -35,7 +35,7 @@ It reports whether a click takes the pointer lock and whether releasing it works
 ## Crates
 
 - `crates/nbt`: NBT reader/writer for both Bedrock (little-endian) and Java (big-endian).
-- `crates/mcpe-world`: reads LevelDB-era Pocket Edition worlds (0.9 through 0.17: `LegacyTerrain` and v0 sub-chunks). It works from an in-memory copy, so the source world is never modified, and it builds for `wasm32-unknown-unknown`.
+- `crates/mcpe-world`: reads LevelDB-era Pocket Edition worlds (0.9 through 0.17: `LegacyTerrain` and v0 sub-chunks) and writes edited columns back (`WorldWriter`; see the crate docs). It works from an in-memory copy, so the source world is never modified until you `write_dir`, and it builds for `wasm32-unknown-unknown`.
 - `crates/memcraft-viewer`: the Bevy 0.19 fly-through viewer. The world is embedded at build time; set `MEMCRAFT_WORLD=<dir>` to use a different one.
 - `crates/mcpe2java`: converts those worlds to Java Edition 1.12.2 Anvil, the last numeric-id version, so the conversion is close to lossless. It recomputes lighting, because PE sub-chunks store none.
 

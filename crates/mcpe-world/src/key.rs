@@ -46,6 +46,22 @@ fn i32_at(k: &[u8], at: usize) -> i32 {
     i32::from_le_bytes(k[at..at + 4].try_into().unwrap())
 }
 
+/// Builds an overworld chunk key: `x`, `z`, tag, and the sub-chunk `y` for
+/// [`ChunkTag::SubChunk`]. The inverse of [`parse`] for overworld chunk keys.
+pub fn chunk_key(pos: ChunkPos, tag: ChunkTag) -> Vec<u8> {
+    let mut k = pos.x.to_le_bytes().to_vec();
+    k.extend(pos.z.to_le_bytes());
+    match tag {
+        ChunkTag::Data2D => k.push(0x2d),
+        ChunkTag::SubChunk(y) => k.extend([0x2f, y]),
+        ChunkTag::LegacyTerrain => k.push(0x30),
+        ChunkTag::BlockEntity => k.push(0x31),
+        ChunkTag::Entity => k.push(0x32),
+        ChunkTag::Other(t) => k.push(t),
+    }
+    k
+}
+
 pub fn parse(k: &[u8]) -> Key {
     // Named keys are printable ASCII. Check first: some names (e.g.
     // "BiomeData", "dimension0") happen to have chunk-key lengths.
@@ -102,6 +118,20 @@ mod tests {
             parse(&nether),
             Key::Chunk { pos: ChunkPos { x: 2, z: 3 }, dim: Dimension::Nether, tag: ChunkTag::LegacyTerrain }
         );
+    }
+
+    #[test]
+    fn chunk_key_inverts_parse() {
+        let pos = ChunkPos { x: -5, z: 300 };
+        for tag in [
+            ChunkTag::Data2D,
+            ChunkTag::SubChunk(6),
+            ChunkTag::LegacyTerrain,
+            ChunkTag::BlockEntity,
+            ChunkTag::Entity,
+        ] {
+            assert_eq!(parse(&chunk_key(pos, tag)), Key::Chunk { pos, dim: Dimension::Overworld, tag });
+        }
     }
 
     #[test]
