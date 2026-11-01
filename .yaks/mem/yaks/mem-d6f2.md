@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T22:14:51Z'
+updated: '2026-11-01T23:05:13Z'
 parent: mem-f5cf
 ---
 
@@ -71,3 +71,25 @@ menu-1 lost with the runner before completing. Respawning as menu-2 from main 0a
 ▸ 2026-11-01T22:14:51Z [menu-2]
 
 menu-2 start: checkout /home/user/memcraft-3, base 0a53ca6, wip commit 6762cae (menu.rs, pointer_locked gating in controls/hotbar, drive.js menu steps, README). Next: tests, clippy, web build, drive run.
+
+![start](mem-d6f2/start.png)
+
+![menu-controls](mem-d6f2/menu-controls.png)
+
+![turned](mem-d6f2/turned.png)
+
+![menu-back](mem-d6f2/menu-back.png)
+
+[menu2-drive](mem-d6f2/menu2-drive.log)
+
+---
+▸ 2026-11-01T23:05:13Z [menu-2]
+
+Decision: buttons are detected through `Interaction` on `Button` inside `grab_pointer` (ignores the LOCK click while any button is hovered/pressed), not UI picking or backdrop observers: one rule, same on native and web.
+Decision: no Esc-to-close. Browsers don't deliver Esc while the pointer is locked and can't relock from an Esc keydown; Resume or a scene click closes the menu. Uniform native/web.
+Decision: Save is shown greyed as "Save (not available)" rather than hidden. `SaveAvailable(bool)` resource + `SaveRequested` message are the hook for mem-5219; no saving implemented.
+Decision: movement/physics (walk gravity too) pauses while the menu is open: look/toggle_mode/scroll/fly/walk and hotbar keys are gated with `.run_if(pointer_locked)`.
+Decision: menu hangs at fixed 200 px top padding so toggling the help text doesn't shift the buttons (centered layout made Controls clicks miss).
+Done: commit d128447 on main (local, not pushed; wip commits 6762cae ab491a5 a1a7434). Files: menu.rs (new), controls.rs, hotbar.rs, main.rs, web/drive.js, README.md.
+Checks: cargo test --workspace all ok (viewer 66 passed); cargo clippy --workspace --all-targets and clippy -p memcraft-viewer --target wasm32-unknown-unknown: 0 warnings. web/build.sh ok. Playwright drive.js (TMPDIR=/tmp): locked before click null; after Controls click null; after left click memcraft; after exitPointerLock null; after Resume memcraft; block edits logged 0. Screenshots attached.
+Gaps: no Esc-to-close; Save is only a hook; drive.js button coordinates assume 1280x720 and the 200 px offset; Resume click relies on edit_blocks running before grab_pointer. Not shorn: herd shears.
