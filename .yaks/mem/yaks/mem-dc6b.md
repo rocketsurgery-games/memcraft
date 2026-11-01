@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T16:25:13Z'
-updated: '2026-11-01T16:25:50Z'
+updated: '2026-11-01T23:24:32Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -49,3 +49,31 @@ moved: hairy -> shaving
 ▸ 2026-11-01T16:25:50Z [delta:herd]
 
 Worker not started yet: disk 12 GB free with three Bevy workers at 12-13 GB each; delta:native-1 starts when door-2 or paint-2 lands and its target is deleted.
+
+---
+▸ 2026-11-01T23:22:13Z [native-1]
+
+native-1 start: Sun Nov  1 23:22:13 UTC 2026; checkout /home/user/memcraft-4; yak file /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-dc6b.md; base 1569374. Not shearing/pushing (per coordinator instruction).
+
+---
+▸ 2026-11-01T23:24:32Z [native-1]
+kind: checkpoint
+commit: cfa0c5a68b1d7ee0c46bb718f6450dce3224d2b0
+---
+
+Checkpoint: wip commit cfa0c5a (viewer: optional world dir arg, WorldMap edited tracking, save.rs with backup + Ctrl+S/menu SaveRequested). Building tests (CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0 cargo test -p memcraft-viewer, log ~/native1-test.log).
+
+---
+▸ 2026-11-01T23:24:32Z [native-1]
+
+Decision: wire native save to the menu's `SaveRequested` now (plus Ctrl+S sending the same message), rather than a bare key only.
+
+- The yak says a key is fine "until the menu's Save hook exists"; mem-d6f2 landed it, so the key is no longer the only trigger.
+- Native sets `SaveAvailable(true)` only when a world dir was given, so the button is greyed for the embedded world. mem-5219 keeps the browser half and any UI feedback (native only logs).
+- Rejected: Ctrl+S only (leaves the menu button dead natively); a separate event type (would duplicate `SaveRequested`).
+
+Decision: the backup is `<world dir>/db.backup-YYYYMMDD-HHMMSS[-n]` (UTC), inside the world dir, beside `db/`.
+
+- A sibling of the world dir would show up as another world in PE's worlds folder.
+- A save with no edited columns writes nothing and makes no backup. Backups are never pruned (follow-up).
+- Rejected: backing up by renaming `db/` (a crash then leaves no live db; `write_dir` already swaps atomically).
