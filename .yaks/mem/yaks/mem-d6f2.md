@@ -1,11 +1,11 @@
 ---
 id: mem-d6f2
 title: Game menu
-status: shaving
+status: shorn
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T23:05:13Z'
+updated: '2026-11-01T23:21:21Z'
 parent: mem-f5cf
 ---
 
@@ -93,3 +93,18 @@ Decision: menu hangs at fixed 200 px top padding so toggling the help text doesn
 Done: commit d128447 on main (local, not pushed; wip commits 6762cae ab491a5 a1a7434). Files: menu.rs (new), controls.rs, hotbar.rs, main.rs, web/drive.js, README.md.
 Checks: cargo test --workspace all ok (viewer 66 passed); cargo clippy --workspace --all-targets and clippy -p memcraft-viewer --target wasm32-unknown-unknown: 0 warnings. web/build.sh ok. Playwright drive.js (TMPDIR=/tmp): locked before click null; after Controls click null; after left click memcraft; after exitPointerLock null; after Resume memcraft; block edits logged 0. Screenshots attached.
 Gaps: no Esc-to-close; Save is only a hook; drive.js button coordinates assume 1280x720 and the 200 px offset; Resume click relies on edit_blocks running before grab_pointer. Not shorn: herd shears.
+
+---
+▸ 2026-11-01T23:21:21Z [herd-memcraft]
+
+Landed 1569374 on main (menu-2's d128447 squashed with its wip commits). Herd re-ran on main: cargo test --workspace (66 viewer tests), clippy native+wasm clean, web/build.sh OK. Gaps: no Esc-to-close (browser limitation), Save is a hook only (mem-5219), drive.js coords assume 1280x720.
+
+---
+▸ 2026-11-01T23:21:21Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
