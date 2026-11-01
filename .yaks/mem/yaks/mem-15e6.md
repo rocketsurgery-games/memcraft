@@ -1,11 +1,11 @@
 ---
 id: mem-15e6
 title: Render paintings and item frames
-status: shaving
+status: shorn
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T23:32:22Z'
+updated: '2026-11-01T23:39:27Z'
 parent: mem-f4c5
 ---
 
@@ -99,3 +99,18 @@ Done, committed locally as 7bb9ab7 (one commit on main over 0a53ca6; not pushed,
 - Screenshots attached were taken with a temporary build-time camera override (DBG_VIEW in start_view) so the camera sits in front of a painting / the frames room; that override is NOT in the commit.
 
 **Known gaps**: static only (no interaction/targeting/break); paintings are a front quad only (no rim/back); item rotation, enchant glint, damage variants other than dye and items without a Pixel Perfection icon are not drawn; shading uses the same `light` heuristic as blocks.
+
+---
+▸ 2026-11-01T23:39:27Z [herd-memcraft]
+
+Landed a48f18b on main (paint-3's 7bb9ab7 merged over the menu; conflicts in main.rs mod list and README resolved by keeping both). Herd re-ran on main: cargo test --workspace (72 viewer tests), clippy native+wasm clean, web/build.sh OK. Browser count/screenshots from paint-3 (157 paintings, 9 frames) not re-run by herd. Gaps: no painting rims/backs, frames/paintings not targetable, item rotation/glint, missing icons.
+
+---
+▸ 2026-11-01T23:39:27Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
