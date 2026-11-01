@@ -5,10 +5,11 @@ status: hairy
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T01:16:34Z'
+updated: '2026-11-01T01:16:45Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
+- mem-6934
 ---
 
 Signs keep their four lines in the `Sign` block entity (`Text1`..`Text4`), which the viewer ignores today.

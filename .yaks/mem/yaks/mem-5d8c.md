@@ -5,10 +5,11 @@ status: hairy
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T01:16:34Z'
+updated: '2026-11-01T01:16:45Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
+- mem-6934
 ---
 
 Chests (including double chests), furnaces, dispensers, droppers, hoppers, brewing stands: right click opens a view of the block entity's `Items`.
