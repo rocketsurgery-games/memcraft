@@ -1,7 +1,11 @@
 //! Fly through an old Pocket Edition world.
 //!
-//! Runs natively (`cargo run -p memcraft-viewer --release`) or in the browser
-//! (see `web/build.sh`). Controls: click to capture the mouse (Esc releases
+//! Runs natively (`cargo run -p memcraft-viewer --release [-- <world dir>]`) or
+//! in the browser (see `web/build.sh`). Natively, an optional argument names a
+//! world directory to open instead of the embedded sample world; Save (in the
+//! menu, or Ctrl+S) then writes the edits back to it (see `save`).
+//!
+//! Controls: click to capture the mouse (Esc releases
 //! it and opens the menu), WASD to move, Q/E down/up, Shift to go fast,
 //! scroll to change speed,
 //! F to switch between flying and walking (Space jumps), 1-9 to choose a block,
@@ -15,6 +19,8 @@ mod interact;
 mod menu;
 mod mesh;
 mod physics;
+#[cfg(not(target_arch = "wasm32"))]
+mod save;
 mod targeting;
 mod world;
 
@@ -26,6 +32,7 @@ use bevy::prelude::*;
 use controls::{Controller, ControlsPlugin};
 use mcpe_world::World as PeWorld;
 use physics::Solids;
+use std::path::{Path, PathBuf};
 use world::{BlockMaterials, WorldMap};
 
 mod world_files {
@@ -39,7 +46,17 @@ struct AtlasImage(Handle<Image>);
 const SKY: Color = Color::srgb(0.53, 0.72, 0.98);
 
 fn main() {
-    App::new()
+    let dir = world_dir_arg();
+    let world = load_world(dir.as_deref()).unwrap_or_else(|e| {
+        eprintln!("error: opening {}: {e}", dir.as_deref().unwrap_or(Path::new("the embedded world")).display());
+        std::process::exit(1);
+    });
+    let map = WorldMap::new(world);
+    let mut app = App::new();
+    app.insert_resource(Solids::from_world(map.world())).insert_resource(map);
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins(save::SavePlugin { dir });
+    app
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "MemCraft".into(),
@@ -59,9 +76,33 @@ fn main() {
         .run();
 }
 
-fn load_world() -> PeWorld {
-    let files = world_files::DB_FILES.iter().map(|(n, b)| (n.to_string(), b.to_vec()));
-    PeWorld::from_files(world_files::LEVEL_DAT, files).expect("embedded world should load")
+/// The world directory named on the command line, if any. The browser has
+/// no command line.
+#[cfg(not(target_arch = "wasm32"))]
+fn world_dir_arg() -> Option<PathBuf> {
+    let mut args = std::env::args_os().skip(1);
+    let dir = args.next().map(PathBuf::from);
+    if args.next().is_some() || dir.as_deref().is_some_and(|d| d.starts_with("-")) {
+        eprintln!("usage: memcraft-viewer [world dir]\n(the directory holding level.dat and db/; the embedded world if omitted)");
+        std::process::exit(2);
+    }
+    dir
+}
+
+#[cfg(target_arch = "wasm32")]
+fn world_dir_arg() -> Option<PathBuf> {
+    None
+}
+
+/// Loads the world in `dir`, or the embedded one.
+fn load_world(dir: Option<&Path>) -> mcpe_world::Result<PeWorld> {
+    match dir {
+        Some(dir) => PeWorld::open_dir(dir),
+        None => {
+            let files = world_files::DB_FILES.iter().map(|(n, b)| (n.to_string(), b.to_vec()));
+            PeWorld::from_files(world_files::LEVEL_DAT, files)
+        }
+    }
 }
 
 /// The embedded texture atlas, sampled without filtering to keep the pixels sharp.
@@ -82,9 +123,9 @@ fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    map: Res<WorldMap>,
 ) {
-    let world = load_world();
-    commands.insert_resource(Solids::from_world(&world));
+    let world = map.world();
 
     // Lighting is baked into vertex colours (which multiply the texture), so
     // the materials are unlit. They differ only in how texture alpha is used.
@@ -105,7 +146,7 @@ fn setup(
         translucent: material(AlphaMode::Blend),
     });
 
-    let view = start_view(&world);
+    let view = start_view(world);
     commands.spawn((
         Camera3d::default(),
         // Colours are baked and final; tonemapping would only shift them
@@ -122,7 +163,6 @@ fn setup(
         Node { position_type: PositionType::Absolute, top: px(8), left: px(10), ..default() },
     ));
     // The columns are meshed by `world::remesh` on the first frame.
-    commands.insert_resource(WorldMap::new(world));
 }
 
 /// Starts at the local player's saved eye position and facing, or above spawn.
