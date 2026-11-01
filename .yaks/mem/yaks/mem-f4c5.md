@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:23:03Z'
-updated: '2026-11-01T03:41:18Z'
+updated: '2026-11-01T15:33:27Z'
 ---
 
 Some starting points (I'm sure we need more than this):
@@ -106,3 +106,8 @@ Joel's answers recorded (01:24Z). Filed: mem-6ad1 levers/buttons, mem-15e6 paint
 ▸ 2026-11-01T03:41:18Z [herd]
 
 Batch 3 workers started Sun Nov  1 03:41:18 UTC 2026: door-1 mem-1457 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADr-PJIBxBArrcX3fBVIrK_YnmSnEPGN; paint-1 mem-15e6 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADsAVJIBxBArrcX3fBVIrK_YnmSnEPGN; sign-1 mem-c910 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADsEcpIBxBArrcX3fBVIrK_YnmSnEPGN.
+
+---
+▸ 2026-11-01T15:33:27Z [delta:herd]
+
+Respawned Sun Nov  1 15:33:27 UTC 2026 after wipe, base 48ed523: delta:door-2 mem-1457 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtvLZIBxBBCaHaBp8ZDPqDsZufUZIx8; delta:paint-2 mem-15e6 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtwqJIBxBBCaHaBp8ZDPqDsZufUZIx8. mem-c910 (signs) waits for door-2 to land so it reuses the interaction rule.
