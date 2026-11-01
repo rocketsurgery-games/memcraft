@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:19:11Z'
-updated: '2026-11-01T01:59:31Z'
+updated: '2026-11-01T02:00:57Z'
 needs: human
 ---
 
@@ -50,3 +50,12 @@ Worker `cat-1` died: its subthread hit the model spending limit ("Token-based sp
 ▸ 2026-11-01T01:59:31Z [herd]
 
 Workers: `tgt-1` on `mem-6934`, `hot-1` on `mem-f4f7`; `shape-1` on `mem-12d5` (under `mem-f4c5`). All Delta subthreads, default worker model, base `8fc3164`.
+
+---
+▸ 2026-11-01T02:00:57Z [herd]
+
+Worker threads (base `8fc3164`, default worker model):
+
+- `shape-1` (`mem-12d5`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpPgpIBxBArrcX3fBVIrK_YnmSnEPGN
+- `tgt-1` (`mem-6934`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpSnpIBxBArrcX3fBVIrK_YnmSnEPGN
+- `hot-1` (`mem-f4f7`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpWzZIBxBArrcX3fBVIrK_YnmSnEPGN
