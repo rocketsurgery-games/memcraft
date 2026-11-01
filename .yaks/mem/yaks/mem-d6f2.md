@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T22:09:39Z'
+updated: '2026-11-01T22:14:51Z'
 parent: mem-f5cf
 ---
 
@@ -66,3 +66,8 @@ Progress: menu.rs written (Bevy UI overlay open whenever pointer unlocked; Resum
 ▸ 2026-11-01T22:09:39Z [herd-memcraft]
 
 menu-1 lost with the runner before completing. Respawning as menu-2 from main 0a53ca6.
+
+---
+▸ 2026-11-01T22:14:51Z [menu-2]
+
+menu-2 start: checkout /home/user/memcraft-3, base 0a53ca6, wip commit 6762cae (menu.rs, pointer_locked gating in controls/hotbar, drive.js menu steps, README). Next: tests, clippy, web build, drive run.
