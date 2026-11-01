@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T23:40:22Z'
+updated: '2026-11-01T23:46:39Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -67,3 +67,23 @@ Claim (sign-2): taking over from lost sign-1; base a48f18b.
 - date: Sun Nov  1 23:40:22 UTC 2026
 - farm: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-c910.md
 - checkout: /home/user/memcraft-5
+
+---
+▸ 2026-11-01T23:46:39Z [sign-2]
+
+Decision: sign text is a baked glyph texture on a quad in front of the board, from a small built-in 5x8 ASCII bitmap font (`font.rs`), one entity per sign with text.
+
+- Rejected: Bevy `Text2d`, which renders only through the 2D pipeline (not in this 3D scene), and needs features we cannot add (Cargo.toml is off limits).
+- Rejected: Minecraft's own font (not redistributable); drawing text pixels as column-mesh quads (huge meshes, remesh on every edit).
+- Cost: monospaced 6 px advance (Minecraft's is proportional), no colours/formatting (`§x` codes are skipped).
+
+Decision: the editor and the menu coexist through a `controls::Modal` flag.
+
+- Opening the editor (`EditSign` message from the right click in `targeting::edit_blocks`) frees the pointer and sets `Modal`; closing locks it again.
+- `show_menu` hides the menu while `Modal` is set, `grab_pointer` does not lock on a scene click while it is set.
+- The player's input systems already run only while the pointer is locked (`pointer_locked`), so WASD/number keys do nothing while typing.
+- Rejected: leaving the menu up behind/over the editor; a separate editor state machine in the menu.
+
+Decision: a block entity is dropped when its cell's block id changes (`WorldMap::set_block`), so a broken sign loses its text and a later save has no orphan. `WorldMap::{block_entity, set_block_entity, take_edited_cells}` are the world-side API (saving reads `col.block_entities`).
+
+Heads-up for the herd: in this checkout `git status` shows `entities.rs`, `item_icons.rs`, `assets/paintings/`, the new textures, and the edits to `main.rs`/`mesh.rs`/`build.rs`/`mcpe-world/src/lib.rs` as uncommitted/untracked on top of a48f18b: the mem-15e6 commits there are empty. My signs code uses `entities::Wall`. I commit only my own files with explicit paths.
