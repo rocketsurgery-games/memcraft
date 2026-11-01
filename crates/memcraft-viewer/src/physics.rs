@@ -46,15 +46,25 @@ const FULL: Fill = 16;
 /// doesn't have to keep the whole `mcpe_world::World` alive. Columns that
 /// aren't loaded count as solid, and so does everything below the world, so
 /// the player can't walk off the edge into the void.
+/// How much of a block is solid, as `blocks::look` draws it: cubes, slabs
+/// and glass are solid, flowers and air are not, and neither is liquid
+/// (there is no swimming yet, so you sink through it).
+fn fill(id: u8, data: u8) -> Fill {
+    match blocks::look(id, data).shape {
+        _ if matches!(id, 8..=11) => 0,
+        Shape::Air | Shape::Cross => 0,
+        Shape::Cube | Shape::Translucent => FULL,
+        Shape::Partial(h) => (h * f32::from(FULL)).round() as Fill,
+    }
+}
+
 #[derive(Resource, Default)]
 pub struct Solids {
     columns: HashMap<ChunkPos, Box<[Fill]>>,
 }
 
 impl Solids {
-    /// Solidity of every block of `world`, as `blocks::look` draws it:
-    /// cubes, slabs and glass are solid, flowers and air are not, and
-    /// neither is liquid (there is no swimming yet, so you sink through it).
+    /// Solidity of every block of `world` (see [`fill`]).
     pub fn from_world(world: &PeWorld) -> Self {
         let mut solids = Self::default();
         for (pos, col) in &world.columns {
@@ -63,12 +73,7 @@ impl Solids {
                 for z in 0..16 {
                     for y in 0..HEIGHT {
                         let (id, data) = col.block(x, y, z);
-                        column[Self::index(x, y, z)] = match blocks::look(id, data).shape {
-                            _ if matches!(id, 8..=11) => 0,
-                            Shape::Air | Shape::Cross => 0,
-                            Shape::Cube | Shape::Translucent => FULL,
-                            Shape::Partial(h) => (h * f32::from(FULL)).round() as Fill,
-                        };
+                        column[Self::index(x, y, z)] = fill(id, data);
                     }
                 }
             }
@@ -78,6 +83,16 @@ impl Solids {
 
     fn index(x: usize, y: usize, z: usize) -> usize {
         (x * 16 + z) * HEIGHT + y
+    }
+
+    #[allow(dead_code, reason = "used by block targeting and placing, next")]
+    /// Follows a block edit. Positions outside the loaded world are ignored
+    /// (they stay solid).
+    pub fn set_block(&mut self, x: i32, y: i32, z: i32, id: u8, data: u8) {
+        let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
+        if let Some(c) = self.columns.get_mut(&pos).filter(|_| (0..HEIGHT as i32).contains(&y)) {
+            c[Self::index(x.rem_euclid(16) as usize, y as usize, z.rem_euclid(16) as usize)] = fill(id, data);
+        }
     }
 
     fn column_mut(&mut self, pos: ChunkPos) -> &mut [Fill] {

@@ -7,20 +7,20 @@
 
 mod blocks;
 mod controls;
+mod hotbar;
 mod mesh;
 mod physics;
-
-use std::collections::HashMap;
+mod world;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::image::ImageSampler;
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::prelude::*;
 use controls::{Controller, ControlsPlugin};
-use mcpe_world::{ChunkPos, World as PeWorld, HEIGHT};
+use mcpe_world::World as PeWorld;
 use physics::Solids;
+use world::{BlockMaterials, WorldMap};
 
 mod world_files {
     include!(concat!(env!("OUT_DIR"), "/world_files.rs"));
@@ -43,49 +43,15 @@ fn main() {
         }))
         .add_plugins(ControlsPlugin)
         .insert_resource(ClearColor(SKY))
+        .init_resource::<hotbar::Hotbar>()
         .add_systems(Startup, setup)
+        .add_systems(Update, world::remesh)
         .run();
 }
 
 fn load_world() -> PeWorld {
     let files = world_files::DB_FILES.iter().map(|(n, b)| (n.to_string(), b.to_vec()));
     PeWorld::from_files(world_files::LEVEL_DAT, files).expect("embedded world should load")
-}
-
-/// sRGB vertex colours to the linear space Bevy expects.
-fn linear(c: [f32; 4]) -> [f32; 4] {
-    let f = |v: f32| v.powf(2.2);
-    [f(c[0]), f(c[1]), f(c[2]), c[3]]
-}
-
-fn to_bevy(m: mesh::MeshData) -> Mesh {
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, m.positions)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, m.normals)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, m.uvs)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, m.colors.into_iter().map(linear).collect::<Vec<_>>())
-        .with_inserted_indices(Indices::U32(m.indices))
-}
-
-/// Highest opaque block per column, so faces under cover can be drawn darker.
-fn sky_heights(world: &PeWorld) -> HashMap<ChunkPos, [i32; 256]> {
-    world
-        .columns
-        .iter()
-        .map(|(pos, col)| {
-            let h = std::array::from_fn(|i| {
-                let (x, z) = (i % 16, i / 16);
-                (0..HEIGHT)
-                    .rev()
-                    .find(|&y| {
-                        let (id, data) = col.block(x, y, z);
-                        blocks::look(id, data).shape == blocks::Shape::Cube
-                    })
-                    .map_or(-1, |y| y as i32)
-            });
-            (*pos, h)
-        })
-        .collect()
 }
 
 /// The embedded texture atlas, sampled without filtering to keep the pixels sharp.
@@ -104,20 +70,11 @@ fn atlas_image() -> Image {
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
     let world = load_world();
     commands.insert_resource(Solids::from_world(&world));
-    let heights = sky_heights(&world);
-    let light = |x: i32, y: i32, z: i32| -> f32 {
-        let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
-        match heights.get(&pos) {
-            Some(h) if y <= h[(z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize] => 0.55,
-            _ => 1.0,
-        }
-    };
 
     // Lighting is baked into vertex colours (which multiply the texture), so
     // the materials are unlit. They differ only in how texture alpha is used.
@@ -131,21 +88,11 @@ fn setup(
             ..default()
         })
     };
-    let opaque = material(AlphaMode::Opaque);
-    let cutout = material(AlphaMode::Mask(0.5));
-    let translucent = material(AlphaMode::Blend);
-
-    let mut quads = 0;
-    for pos in world.columns.keys() {
-        let m = mesh::mesh_column(&world, pos.x, pos.z, &light);
-        for (pass, material) in [(m.opaque, &opaque), (m.cutout, &cutout), (m.translucent, &translucent)] {
-            quads += pass.indices.len() / 6;
-            if !pass.is_empty() {
-                commands.spawn((Mesh3d(meshes.add(to_bevy(pass))), MeshMaterial3d(material.clone())));
-            }
-        }
-    }
-    info!("meshed {} columns, {quads} quads", world.columns.len());
+    commands.insert_resource(BlockMaterials {
+        opaque: material(AlphaMode::Opaque),
+        cutout: material(AlphaMode::Mask(0.5)),
+        translucent: material(AlphaMode::Blend),
+    });
 
     let view = start_view(&world);
     commands.spawn((
@@ -166,6 +113,8 @@ fn setup(
         TextFont { font_size: FontSize::Px(14.0), ..default() },
         Node { position_type: PositionType::Absolute, top: px(8), left: px(10), ..default() },
     ));
+    // The columns are meshed by `world::remesh` on the first frame.
+    commands.insert_resource(WorldMap::new(world));
 }
 
 /// Starts at the local player's saved eye position and facing, or above spawn.
