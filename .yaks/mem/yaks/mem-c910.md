@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T15:21:48Z'
+updated: '2026-11-01T23:40:22Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -58,3 +58,12 @@ moved: hairy -> shaving
 ▸ 2026-11-01T15:21:48Z [herd]
 
 Runner was wiped again (~11h ago, found Sun Nov  1 15:21:48 UTC 2026); workers door-1/paint-1/sign-1 show no progress since 03:40Z and their runner checkouts are gone. Treating as dead pending Joel's go-ahead to respawn.
+
+---
+▸ 2026-11-01T23:40:22Z [sign-2]
+
+Claim (sign-2): taking over from lost sign-1; base a48f18b.
+
+- date: Sun Nov  1 23:40:22 UTC 2026
+- farm: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-c910.md
+- checkout: /home/user/memcraft-5
