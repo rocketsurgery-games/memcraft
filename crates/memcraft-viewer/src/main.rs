@@ -3,7 +3,7 @@
 //! Runs natively (`cargo run -p memcraft-viewer --release`) or in the browser
 //! (see `web/build.sh`). Controls: click to capture the mouse (Esc releases
 //! it), WASD to move, Q/E down/up, Shift to go fast, scroll to change speed,
-//! F to switch between flying and walking (Space jumps).
+//! F to switch between flying and walking (Space jumps), 1-9 to choose a block.
 
 mod blocks;
 mod catalog;
@@ -27,6 +27,10 @@ mod world_files {
     include!(concat!(env!("OUT_DIR"), "/world_files.rs"));
 }
 
+/// The texture atlas as a GPU image, for the world's materials and the hotbar icons.
+#[derive(Resource)]
+struct AtlasImage(Handle<Image>);
+
 const SKY: Color = Color::srgb(0.53, 0.72, 0.98);
 
 fn main() {
@@ -44,7 +48,7 @@ fn main() {
         }))
         .add_plugins(ControlsPlugin)
         .insert_resource(ClearColor(SKY))
-        .init_resource::<hotbar::Hotbar>()
+        .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, world::remesh)
         .run();
@@ -80,6 +84,7 @@ fn setup(
     // Lighting is baked into vertex colours (which multiply the texture), so
     // the materials are unlit. They differ only in how texture alpha is used.
     let atlas = images.add(atlas_image());
+    commands.insert_resource(AtlasImage(atlas.clone()));
     let mut material = |alpha_mode| {
         materials.add(StandardMaterial {
             base_color: Color::WHITE,
@@ -108,7 +113,7 @@ fn setup(
 
     commands.spawn((
         Text::new(format!(
-            "{}\nclick to look around (Esc releases) - WASD move - Q/E down/up - Shift fast - scroll: speed\nF: fly/walk (walk: Space jumps)",
+            "{}\nclick to look around (Esc releases) - WASD move - Q/E down/up - Shift fast - scroll: speed\nF: fly/walk (walk: Space jumps) - 1-9: choose block",
             world.name().unwrap_or("MemCraft")
         )),
         TextFont { font_size: FontSize::Px(14.0), ..default() },
