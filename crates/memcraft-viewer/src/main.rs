@@ -6,6 +6,7 @@
 //! F to switch between flying and walking (Space jumps).
 
 mod blocks;
+mod catalog;
 mod controls;
 mod mesh;
 mod physics;
