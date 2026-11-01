@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T15:32:23Z'
+updated: '2026-11-01T15:41:38Z'
 parent: mem-f5cf
 ---
 
@@ -47,3 +47,17 @@ to: shaving
 ---
 
 moved: hairy -> shaving
+
+---
+▸ 2026-11-01T15:34:00Z [delta:writer-1]
+
+Start: 2026-11-01T15:33:28Z (`date -u`), base 48ed523, checkout /home/user/memcraft-4.
+
+`yaks path mem-a86b`: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-a86b.md
+
+Read claim note and parent mem-f5cf (Joel: write back into the PE LevelDB world is fine). `crates/nbt` already has `write`/`compound`; the writer need not add one (will confirm and add tests only if gaps).
+
+---
+▸ 2026-11-01T15:41:38Z [delta:writer-1]
+
+Progress (2026-11-01 ~16:15Z): implemented in `crates/mcpe-world`: `WorldWriter` (open_dir/from_files, put_column, finish -> `SavedWorld`, write_dir), `encode.rs` (column -> records), `db.rs` shared `MemDb`, `key::chunk_key`; `Column` gained `heights`, `grass_colors`, `PartialEq`, `recompute_heights()`. Tests: unit (re-encode all 256 sample columns == stored records; heights recompute == stored for all 256; untouched records identical after saving edited ones), integration `tests/save_world.rs`, and `crates/mcpe2java/tests/saved_world.rs`. `cargo test -p mcpe-world -p nbt -p mcpe2java` green. Remaining: clippy, wasm check, CLI on saved dir, workspace test.

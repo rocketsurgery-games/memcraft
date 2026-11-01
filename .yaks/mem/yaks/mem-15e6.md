@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T15:21:48Z'
+updated: '2026-11-01T15:44:07Z'
 parent: mem-f4c5
 ---
 
@@ -46,3 +46,13 @@ moved: hairy -> shaving
 ▸ 2026-11-01T15:21:48Z [herd]
 
 Runner was wiped again (~11h ago, found Sun Nov  1 15:21:48 UTC 2026); workers door-1/paint-1/sign-1 show no progress since 03:40Z and their runner checkouts are gone. Treating as dead pending Joel's go-ahead to respawn.
+
+---
+▸ 2026-11-01T15:33:28Z [delta:paint-2]
+
+Worker paint-2 start: Sun Nov  1 15:33:28 UTC 2026. yaks path: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-15e6.md. Base main 48ed523.
+
+---
+▸ 2026-11-01T15:44:07Z [delta:paint-2]
+
+Progress ($(date -u) approx): bundled world has 157 paintings (44 with plain id 83 plus 113 whose id has flag bits above the low byte, 4194387) and 9 item frames (block entity ItemFrame + block 199), holding armour boots and horse armour. Painting Pos is the slab centre, Direction 0..3 = +z,-x,-z,+x facing. Wrote src/entities.rs (decode, meshes, spawn system), build.rs embeds assets/paintings atlas, 28 PP textures added to assets/textures. Now compiling/testing.
