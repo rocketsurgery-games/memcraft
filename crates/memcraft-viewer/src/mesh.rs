@@ -23,7 +23,7 @@ impl MeshData {
     /// Adds a quad. `corners` run bottom-left, bottom-right, top-right,
     /// top-left as seen from the front; `uv` is the `[u0, v0, u1, v1]` rectangle
     /// of the atlas mapped onto them.
-    fn quad(&mut self, corners: [[f32; 3]; 4], normal: [f32; 3], color: [f32; 4], uv: [f32; 4]) {
+    pub fn quad(&mut self, corners: [[f32; 3]; 4], normal: [f32; 3], color: [f32; 4], uv: [f32; 4]) {
         let base = self.positions.len() as u32;
         let [u0, v0, u1, v1] = uv;
         self.positions.extend(corners);
@@ -55,7 +55,7 @@ impl ColumnMesh {
 /// The atlas rectangle `[u0, v0, u1, v1]` of the part `[u0, v0, u1, v1]`
 /// (each 0..1, v downwards) of a tile. Inset by a sliver of a texel so
 /// nearest sampling never reads the neighbouring tile.
-fn tile_rect(tile: Tile, [u0, v0, u1, v1]: [f32; 4]) -> [f32; 4] {
+pub fn tile_rect(tile: Tile, [u0, v0, u1, v1]: [f32; 4]) -> [f32; 4] {
     const INSET: f32 = 0.01;
     let (w, h) = (atlas::WIDTH as f32, atlas::HEIGHT as f32);
     let px = atlas::TILE_PX as f32;

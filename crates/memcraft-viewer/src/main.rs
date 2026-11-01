@@ -9,8 +9,10 @@
 mod blocks;
 mod catalog;
 mod controls;
+mod entities;
 mod hotbar;
 mod interact;
+mod item_icons;
 mod mesh;
 mod physics;
 mod targeting;
@@ -53,6 +55,8 @@ fn main() {
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
+        // After `Startup`, so the world and materials `setup` inserts are there.
+        .add_systems(PostStartup, entities::spawn)
         .add_systems(Update, world::remesh)
         .run();
 }

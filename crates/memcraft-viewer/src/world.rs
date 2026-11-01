@@ -38,7 +38,6 @@ impl WorldMap {
         Self { world, heights, dirty }
     }
 
-    #[allow(dead_code, reason = "only the tests need it so far")]
     pub fn world(&self) -> &PeWorld {
         &self.world
     }
@@ -73,7 +72,7 @@ impl WorldMap {
     }
 
     /// Brightness (0..1) of the air block at `(x, y, z)`, which a face looks into.
-    fn light(&self, x: i32, y: i32, z: i32) -> f32 {
+    pub fn light(&self, x: i32, y: i32, z: i32) -> f32 {
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
         match self.heights.get(&pos) {
             Some(h) if y <= h[(z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize] => SHADOW,
@@ -116,7 +115,7 @@ fn linear(c: [f32; 4]) -> [f32; 4] {
     [f(c[0]), f(c[1]), f(c[2]), c[3]]
 }
 
-fn to_bevy(m: MeshData) -> Mesh {
+pub fn to_bevy(m: MeshData) -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD)
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, m.positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, m.normals)
