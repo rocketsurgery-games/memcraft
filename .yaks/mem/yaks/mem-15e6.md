@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T22:09:39Z'
+updated: '2026-11-01T22:10:40Z'
 parent: mem-f4c5
 ---
 
@@ -66,3 +66,8 @@ Progress: entities.rs done; `cargo test --workspace` all ok (incl. 2 new entitie
 ▸ 2026-11-01T22:09:39Z [herd-memcraft]
 
 paint-2's worktree is unrecoverable (runner wiped; merge_worktrees: version does not reach its origin). Respawning as paint-3 from main 0a53ca6. paint-2 had reached: entities.rs, assets/paintings/, item textures, 157 paintings + 9 item frames drawn.
+
+---
+▸ 2026-11-01T22:10:40Z [paint-3]
+
+paint-3 start: Sun Nov  1 22:10:40 UTC 2026. Checkout /home/user/memcraft-2, base main 0a53ca6. Rebuilding paint-2's work (lost).
