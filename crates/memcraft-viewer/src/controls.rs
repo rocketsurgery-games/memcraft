@@ -16,6 +16,11 @@ use mcpe_world::HEIGHT;
 
 use crate::physics::{Body, Solids, EYE_HEIGHT};
 
+/// The mouse buttons, all in one place. Middle is kept for picking a block.
+pub const LOCK_BUTTON: MouseButton = MouseButton::Left;
+pub const BREAK_BUTTON: MouseButton = MouseButton::Left;
+pub const PLACE_BUTTON: MouseButton = MouseButton::Right;
+
 pub struct ControlsPlugin;
 
 impl Plugin for ControlsPlugin {
@@ -74,7 +79,7 @@ impl Controller {
     }
 }
 
-fn is_locked(cursor: &CursorOptions) -> bool {
+pub fn is_locked(cursor: &CursorOptions) -> bool {
     cursor.grab_mode != CursorGrabMode::None
 }
 
@@ -83,10 +88,12 @@ fn set_locked(cursor: &mut CursorOptions, locked: bool) {
     cursor.visible = !locked;
 }
 
-/// A left click locks the pointer, and it stays locked until Esc or until
-/// the window loses focus. In the browser, Esc is handled by the browser
-/// itself (the page never sees it), so the lock is re-read from the page.
-fn grab_pointer(
+/// A click of [`LOCK_BUTTON`] locks the pointer, and it stays locked until
+/// Esc or until the window loses focus. In the browser, Esc is handled by the
+/// browser itself (the page never sees it), so the lock is re-read from the
+/// page. The click that locks must not also act on a block: `targeting`
+/// handles clicks before this system, while the pointer is still free.
+pub fn grab_pointer(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     mut window: Single<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
@@ -94,7 +101,7 @@ fn grab_pointer(
 ) {
     let (window, cursor) = &mut *window;
     let locked = is_locked(cursor);
-    if !locked && window.focused && mouse.just_pressed(MouseButton::Left) {
+    if !locked && window.focused && mouse.just_pressed(LOCK_BUTTON) {
         set_locked(cursor, true);
     } else if locked && (keys.just_pressed(KeyCode::Escape) || !window.focused) {
         set_locked(cursor, false);
@@ -188,7 +195,7 @@ fn fly(time: Res<Time<Real>>, keys: Res<ButtonInput<KeyCode>>, mut camera: Singl
 
 /// Walking: W/S/A/D along the ground in the direction the player faces
 /// (pitch ignored), Space to jump, Shift to sprint. The camera sits at the eyes.
-fn walk(
+pub fn walk(
     time: Res<Time<Real>>,
     keys: Res<ButtonInput<KeyCode>>,
     solids: Res<Solids>,

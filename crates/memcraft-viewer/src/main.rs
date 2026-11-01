@@ -3,7 +3,8 @@
 //! Runs natively (`cargo run -p memcraft-viewer --release`) or in the browser
 //! (see `web/build.sh`). Controls: click to capture the mouse (Esc releases
 //! it), WASD to move, Q/E down/up, Shift to go fast, scroll to change speed,
-//! F to switch between flying and walking (Space jumps), 1-9 to choose a block.
+//! F to switch between flying and walking (Space jumps), 1-9 to choose a block,
+//! left click to break the block in the crosshair, right click to place one.
 
 mod blocks;
 mod catalog;
@@ -11,6 +12,7 @@ mod controls;
 mod hotbar;
 mod mesh;
 mod physics;
+mod targeting;
 mod world;
 
 use bevy::asset::RenderAssetUsages;
@@ -46,7 +48,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(ControlsPlugin)
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
@@ -113,7 +115,7 @@ fn setup(
 
     commands.spawn((
         Text::new(format!(
-            "{}\nclick to look around (Esc releases) - WASD move - Q/E down/up - Shift fast - scroll: speed\nF: fly/walk (walk: Space jumps) - 1-9: choose block",
+            "{}\nclick to look around (Esc releases) - WASD move - Q/E down/up - Shift fast - scroll: speed\nF: fly/walk (walk: Space jumps) - 1-9: choose block\nleft click: break block - right click: place block",
             world.name().unwrap_or("MemCraft")
         )),
         TextFont { font_size: FontSize::Px(14.0), ..default() },

@@ -38,18 +38,16 @@ impl WorldMap {
         Self { world, heights, dirty }
     }
 
-    #[allow(dead_code, reason = "used by block targeting and placing, next")]
+    #[allow(dead_code, reason = "only the tests need it so far")]
     pub fn world(&self) -> &PeWorld {
         &self.world
     }
 
-    #[allow(dead_code, reason = "used by block targeting and placing, next")]
     /// The block at world position `(x, y, z)`; air outside the world.
     pub fn block(&self, x: i32, y: i32, z: i32) -> (u8, u8) {
         self.world.block(x, y, z)
     }
 
-    #[allow(dead_code, reason = "used by block targeting and placing, next")]
     /// Sets the block at `(x, y, z)` and marks what must be remeshed.
     /// Returns false (and changes nothing) outside the loaded world.
     pub fn set_block(&mut self, x: i32, y: i32, z: i32, id: u8, data: u8) -> bool {
@@ -159,7 +157,6 @@ pub fn remesh(
     info!("meshed {} columns, {quads} quads in {:.1} ms", dirty.len(), start.elapsed().as_secs_f64() * 1000.0);
 }
 
-#[allow(dead_code, reason = "used by block targeting and placing, next")]
 /// Keeps physics in step with block edits.
 pub fn set_block(map: &mut WorldMap, solids: &mut Solids, x: i32, y: i32, z: i32, id: u8, data: u8) -> bool {
     let changed = map.set_block(x, y, z, id, data);

@@ -26,7 +26,6 @@ impl Default for Hotbar {
 }
 
 impl Hotbar {
-    #[allow(dead_code, reason = "used by block targeting and placing, next")]
     /// The block that placing puts down, if the selected slot holds one.
     pub fn selected_block(&self) -> Option<Block> {
         self.slots[self.selected]
