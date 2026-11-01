@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:13Z'
-updated: '2026-11-01T01:17:35Z'
+updated: '2026-11-01T01:18:15Z'
 parent: mem-4fcd
 ---
 
@@ -42,3 +42,8 @@ Claim: worker `cat-1` (Delta subthread), base `1277a16`.
 - Out of scope: hotbar, picker, any UI.
 - Evidence: unit tests (every entry draws, unique names), category counts in the summary note.
 - Judge: yakherd at landing.
+
+---
+▸ 2026-11-01T01:18:15Z [cat-1]
+
+start: Sun Nov  1 01:18:12 UTC 2026; yaks path: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-8d69.md
