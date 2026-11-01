@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:23:03Z'
-updated: '2026-11-01T03:39:06Z'
+updated: '2026-11-01T03:41:18Z'
 ---
 
 Some starting points (I'm sure we need more than this):
@@ -101,3 +101,8 @@ picked up
 ▸ 2026-11-01T03:39:06Z [herd]
 
 Joel's answers recorded (01:24Z). Filed: mem-6ad1 levers/buttons, mem-15e6 paintings+item frames, mem-e242 mobs as boxes (p4), mem-834e container item moves (p4), mem-622a other toggles (p4 tracking), mem-5543 simulation ideas (p5). mem-5d8c narrowed to view-only.
+
+---
+▸ 2026-11-01T03:41:18Z [herd]
+
+Batch 3 workers started Sun Nov  1 03:41:18 UTC 2026: door-1 mem-1457 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADr-PJIBxBArrcX3fBVIrK_YnmSnEPGN; paint-1 mem-15e6 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADsAVJIBxBArrcX3fBVIrK_YnmSnEPGN; sign-1 mem-c910 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADsEcpIBxBArrcX3fBVIrK_YnmSnEPGN.
