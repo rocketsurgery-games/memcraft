@@ -1,11 +1,11 @@
 ---
 id: mem-f4c5
 title: Object interactions
-status: hairy
+status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:23:03Z'
-updated: '2026-11-01T01:24:04Z'
+updated: '2026-11-01T01:59:30Z'
 needs: agent
 ---
 
@@ -81,3 +81,12 @@ needs: agent
 2. View-only is fine to start.
 3. :thumbs-up:
 4. Yeah, out of scope. We can file a low-pri yak just to track the ideas.
+
+---
+▸ 2026-11-01T01:59:30Z [herd]
+kind: move
+from: hairy
+to: shaving
+---
+
+moved: hairy -> shaving

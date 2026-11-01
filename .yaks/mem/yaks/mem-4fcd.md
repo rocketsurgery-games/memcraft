@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:19:11Z'
-updated: '2026-11-01T01:30:55Z'
+updated: '2026-11-01T01:59:31Z'
 needs: human
 ---
 
@@ -45,3 +45,8 @@ Worker `cat-1` on `mem-8d69`: thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADonT5IBxBArrcX
 ▸ 2026-11-01T01:30:55Z [herd]
 
 Worker `cat-1` died: its subthread hit the model spending limit ("Token-based spending limit reached"). It left an uncommitted 408-line `catalog.rs` draft in its worktree; the yakherd will review and finish it.
+
+---
+▸ 2026-11-01T01:59:31Z [herd]
+
+Workers: `tgt-1` on `mem-6934`, `hot-1` on `mem-f4f7`; `shape-1` on `mem-12d5` (under `mem-f4c5`). All Delta subthreads, default worker model, base `8fc3164`.

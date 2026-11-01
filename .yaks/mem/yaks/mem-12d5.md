@@ -1,11 +1,11 @@
 ---
 id: mem-12d5
 title: 'Block shapes: doors, trapdoors, gates, fences, panes, stairs, signs'
-status: hairy
+status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T01:16:34Z'
+updated: '2026-11-01T01:59:30Z'
 parent: mem-f4c5
 ---
 
@@ -21,3 +21,22 @@ Prerequisite for interactions: today doors are drawn as full cubes, stairs and s
 
 - Unit tests: box lists for a closed/open door and a stairs block; a walk test through an open door.
 - drive.js screenshots of a door, fence and stairs in the sample world, before and after.
+
+---
+▸ 2026-11-01T01:59:30Z [herd]
+kind: move
+from: hairy
+to: shaving
+---
+
+moved: hairy -> shaving
+
+---
+▸ 2026-11-01T01:59:30Z [herd]
+
+Claim: worker `shape-1` (Delta subthread), base `8fc3164`.
+
+- Scope: `blocks.rs` (a box-list shape and the blocks that use it), `mesh.rs` (meshing boxes), `physics.rs` (`fill`/`Solids` collide with the same boxes; may change `Solids`' representation).
+- Out of scope: `world.rs`, `controls.rs`, any input or UI, interactions (toggling doors is `mem-1457`).
+- Evidence: unit tests named in the yak, existing physics tests still pass, drive.js screenshots of a door, fence and stairs before/after, quad count and wasm size before/after.
+- Judge: yakherd at landing.
