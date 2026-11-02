@@ -1,11 +1,11 @@
 ---
 id: mem-6ad1
 title: 'Levers and buttons: flip and press'
-status: shaving
+status: shorn
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-02T00:41:12Z'
+updated: '2026-11-02T01:14:25Z'
 parent: mem-f4c5
 depends_on:
 - mem-6934
@@ -65,3 +65,18 @@ Evidence (commands re-runnable as-is):
 Known gaps: the button's timed release is unit-tested but not seen in the browser; no button in the drive. Lever sample-world data is mostly 'on' (bit 8 set), unrelated.
 
 Herd: HEAD a48f18b has the tree of 1569374, so the paintings/item-frame changes of 7bb9ab7 are missing from the commit and only uncommitted in my worktree; I committed only my own files/hunks (README and main.rs partially). Check the merge.
+
+---
+▸ 2026-11-02T01:14:24Z [herd-memcraft]
+
+Landed a354d0d on main (with mem-c910). Delta's worktree merge dropped lever-1's interact.rs change; herd re-applied it from 33eb977. Herd evidence on main: 100 viewer tests, clippy native+wasm clean, web build OK, drive CAM=119.5,66.0,12.5,180,12 LEVER=1 logs 'toggled (69, 3) at [119, 65, 9] ... now (69, 11)' and the screenshot shows the lever flipped. Gap: button pop-back seen in unit tests only.
+
+---
+▸ 2026-11-02T01:14:25Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn

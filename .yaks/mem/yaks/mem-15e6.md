@@ -5,7 +5,7 @@ status: shorn
 type: feature
 priority: 3
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-01T23:39:27Z'
+updated: '2026-11-02T01:14:24Z'
 parent: mem-f4c5
 ---
 
@@ -114,3 +114,8 @@ thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
 ---
 
 moved: shaving -> shorn
+
+---
+▸ 2026-11-02T01:14:24Z [herd-memcraft]
+
+History note: a48f18b landed as an empty commit (staging slip); the paintings files are in 3c0db4d (labelled mem-dc6b). main's tree is complete; not rewriting pushed history.

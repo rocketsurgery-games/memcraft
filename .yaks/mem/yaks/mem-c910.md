@@ -1,11 +1,11 @@
 ---
 id: mem-c910
 title: 'Signs: render text, edit text'
-status: shaving
+status: shorn
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T00:39:29Z'
+updated: '2026-11-02T01:14:25Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -135,3 +135,18 @@ Known gaps:
 - Text is not shaded by light.
 - Not tested natively (no display here): the editor in a native window, and Done/Cancel/line buttons by mouse (unit-tested only through keys).
 - Repo state: a48f18b's mem-15e6 commits were empty; commit 20f31f2 adds the files they should have had (entities.rs, item_icons.rs, paintings, textures, build.rs...). Drop it if the herd has its own fix. `edit_blocks` needs `#[allow(clippy::too_many_arguments)]` now (8 params).
+
+---
+▸ 2026-11-02T01:14:24Z [herd-memcraft]
+
+Landed a354d0d on main together with mem-6ad1 (herd merge). Herd re-ran on main: cargo test --workspace (100 viewer tests), clippy native+wasm clean, web/build.sh OK; browser drive logs 'drew the text of 24 of 24 signs'. Merge decisions: sign-2's ?view= replaced by lever-1's ?cam= (same convention); drive.js lost sign-2's VIEW/ACTIONS typing stage, so the editor screenshots are not reproducible from main yet (follow-up). set_block_entity now also marks the column edited so native save writes sign text.
+
+---
+▸ 2026-11-02T01:14:25Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
