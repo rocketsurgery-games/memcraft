@@ -1,11 +1,11 @@
 ---
 id: mem-e242
 title: Render mobs and dropped items as simple boxes
-status: shaving
+status: shorn
 type: feature
 priority: 4
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-02T09:04:51Z'
+updated: '2026-11-02T09:13:25Z'
 parent: mem-f4c5
 ---
 
@@ -39,3 +39,18 @@ mobs-1 checkpoint: code done (commit b62b0c3); sample world draws 90 mobs (32 ch
 ▸ 2026-11-02T09:04:51Z [mobs-1]
 
 Summary: new crates/memcraft-viewer/src/mobs.rs (+ mesh::FACES made pub, mobs::spawn registered in main.rs). Entity type = low byte of id; 32 types in KINDS table with standard hitbox sizes, body+head boxes, colour per type, yaw from Rotation, baby (IsBaby) at half size; dropped items (id 64) are 0.25 cubes with the block's faces or the item icon. Static, not targetable/breakable. Skipped (no fixed size / not boxes): slimes, magma cubes, projectiles, XP orbs, falling blocks. Sample world: 90 mobs {chicken 32, cow 14, minecart 13, ocelot 12, pig 11, sheep 6, skeleton horse 1, zombie horse 1} + 10 items, logged as 'drew 90 mobs ... and 10 dropped items' in the browser console. Evidence: cargo test --workspace, clippy native --workspace --all-targets and wasm all pass, web/build.sh builds; drive screenshots attached (CAM=10.5,69.5,56.0,-100,38 from the ignored 'vantage' test). Commit e679ba2576b7d203ffcd0c69ddfcd98ce46d0abe. Known gaps: no legs/animation, mobs sit at saved Pos, animals' body is 0.75 of the hitbox height.
+
+---
+▸ 2026-11-02T09:13:25Z [herd-memcraft]
+
+Landed as fb63185 (squash of mobs-1 e679ba2). Verify: workspace tests, clippy native+wasm, web build OK; drive drew 90 mobs + 10 items.
+
+---
+▸ 2026-11-02T09:13:25Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
