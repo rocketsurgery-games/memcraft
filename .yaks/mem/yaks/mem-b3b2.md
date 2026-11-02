@@ -1,11 +1,11 @@
 ---
 id: mem-b3b2
 title: Placement orientation for directional blocks
-status: shaving
+status: shorn
 type: task
 priority: 4
 created: '2026-11-01T01:16:13Z'
-updated: '2026-11-02T04:14:23Z'
+updated: '2026-11-02T04:24:44Z'
 parent: mem-4fcd
 depends_on:
 - mem-6934
@@ -48,3 +48,18 @@ Support: `targeting::hit_height` (ray vs face plane) and `targeting::placement` 
 Evidence: cargo test -p memcraft-viewer 144 pass; cargo test --workspace, clippy --workspace --all-targets, clippy wasm32 clean (before drive.js-only edits; viewer tests rerun on final tree). Drive (SwiftShader, CAM=119.5,67.5,15,180,35): stone placed, log on its +z face got (17,8) (axis z), stairs (53,3), door (64,3)+(64,8), 5/5 edits logged. Screenshots attached: log axis z, stairs+door, run8 final. Drive is flaky: picker click sometimes misses (retry loop added) and the aimed spot varies, so run 8 put an upright log on top of a stone (correct for a top-face click) and counted 6 edits vs 5 because the base script broke a block first. cargo fmt --check flags build.rs, which this change doesn't touch.
 
 Gaps / follow-ups: wall torches have right data but blocks.rs still draws them upright; no double-slab merging; pillars (hay/quartz/purpur), pistons, repeaters, rails, anvils not oriented; chests/beds drawn as flat boxes with no visible front; door hinge always left (no neighbour awareness); torches/ladders/signs/doors don't check support block; placing a sign does not open the editor (right-click an existing sign does); middle-click on a wall sign (68) still picks nothing (catalog has only 63).
+
+---
+▸ 2026-11-02T04:24:43Z [herd-memcraft]
+
+Landed da60fd3 on main (orient-1's 9335ef7 squash-merged, fast-forward, no conflicts). Herd re-ran on main: 144 viewer tests, clippy native+wasm clean, web/build.sh OK; drive CAM=119.5,67.5,15,180,35 ORIENT='[["oak stairs",0,0,1],["oak log",300,0,1]]' placed (53,3) and an upright log (17,0) on the floor, screenshot checked. Gaps per orient-1 (wall torches drawn upright, no double-slab merge, pillars/pistons/rails not oriented, door hinge ignores neighbours, no support checks).
+
+---
+▸ 2026-11-02T04:24:44Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
