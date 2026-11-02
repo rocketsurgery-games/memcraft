@@ -12,7 +12,7 @@
 // keys from $KEYS, a JSON list of [key, ms], and screenshot `moved.png`.
 // $VIEW ("x,y,z,yaw,pitch") starts the camera there (the page's `?view=`) and
 // skips the turn; $ACTIONS, a JSON list run once the pointer is locked, drives
-// the scene: ["click"] or ["rightclick"] at the screen centre, ["type", text],
+// the scene: ["click"] or ["rightclick"] at the crosshair, ["type", text],
 // ["press", key], ["wait", ms], ["shot", "name.png"], ["locked"] (logs the lock).
 // Then release the lock as Esc does (the menu must come back, `menu-back.png`),
 // and click the menu's Resume button to lock again. No click may edit a block.
@@ -25,7 +25,8 @@ const http = require('http'), fs = require('fs'), path = require('path')
 const [dir, out] = process.argv.slice(2)
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm' }
 const server = http.createServer((req, res) => {
-  const p = path.join(dir, req.url === '/' ? 'index.html' : req.url.split('?')[0])
+  const file = req.url.split('?')[0]
+  const p = path.join(dir, file === '/' ? 'index.html' : file)
   fs.readFile(p, (e, b) => {
     if (e) { res.statusCode = 404; return res.end() }
     res.setHeader('Content-Type', types[path.extname(p)] || 'application/octet-stream')
@@ -67,6 +68,10 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await page.mouse.click(...CONTROLS, { button: 'left' })
   await page.waitForTimeout(1000)
   console.log('locked after clicking Controls again (must be null):', await locked())
+  // Get to the scene first: a jump of the mouse in the frame that locks the
+  // pointer would turn the view.
+  await page.mouse.move(...SCENE)
+  await page.waitForTimeout(3000)
   await page.mouse.click(...SCENE, { button: 'left' })
   await waitLock(true)
   console.log('locked after left click:', await locked())
@@ -76,8 +81,10 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await shot('turned.png')
 
   for (const [action, arg] of JSON.parse(process.env.ACTIONS || '[]')) {
-    if (action === 'click') await page.mouse.click(640, 360, { button: 'left' })
-    else if (action === 'rightclick') await page.mouse.click(640, 360, { button: 'right' })
+    // Clicks stay where the mouse is: with the pointer locked only the aim
+    // matters, and a jump of the mouse would turn the view.
+    if (action === 'click') await page.mouse.click(...SCENE, { button: 'left' })
+    else if (action === 'rightclick') await page.mouse.click(...SCENE, { button: 'right' })
     else if (action === 'type') await page.keyboard.type(arg, { delay: 100 })
     else if (action === 'press') await page.keyboard.press(arg)
     else if (action === 'wait') await page.waitForTimeout(arg)

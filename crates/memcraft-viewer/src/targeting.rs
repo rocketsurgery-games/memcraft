@@ -155,6 +155,7 @@ fn can_place(existing: Block, block: Block, cell: IVec3, player: (Vec3, Vec3)) -
 
 /// Clicks: the left button breaks the targeted block, the right one uses it
 /// (a door opens, a sign's editor opens, say) or, if it does nothing, places a block against it.
+#[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or message it uses
 fn edit_blocks(
     mouse: Res<ButtonInput<MouseButton>>,
     cursor: Single<&CursorOptions, With<PrimaryWindow>>,

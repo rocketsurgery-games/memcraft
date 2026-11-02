@@ -214,10 +214,10 @@ fn press_buttons(
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
     let mut outcome = Outcome::Keep;
-    if let Some(editing) = &mut editor.0 {
-        if let Some((_, Line(n))) = lines.iter().find(|(i, _)| **i == Interaction::Pressed) {
-            editing.line = *n;
-        }
+    if let Some(editing) = &mut editor.0
+        && let Some((_, Line(n))) = lines.iter().find(|(i, _)| **i == Interaction::Pressed)
+    {
+        editing.line = *n;
     }
     for (interaction, finish, mut background) in finishers {
         background.set_if_neq(BackgroundColor(if *interaction == Interaction::None { BUTTON } else { BUTTON_HOVER }));
