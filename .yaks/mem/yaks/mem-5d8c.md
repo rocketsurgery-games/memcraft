@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T04:24:49Z'
+updated: '2026-11-02T04:25:16Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -49,3 +49,8 @@ Checkpoint: containers.rs (slot reading, double-chest pairing, tests), container
 ![chest-open](mem-5d8c/chest-open.png)
 
 ![chest-esc](mem-5d8c/chest-esc.png)
+
+---
+▸ 2026-11-02T04:25:16Z [chest-1]
+
+Commits 5f8c67c + 3346d5b (local, not pushed). Right-click a chest/trapped chest/barrel/hopper/dropper/dispenser/furnace family/brewing stand/shulker box opens a read-only inventory window (containers.rs: layouts + double-chest pairing via pairx/pairz with adjacency fallback, top half = lower x/z; container_view.rs: panel/OpenContainer; targeting hook; menu help; README; drive.js CHEST stage + camera unit test). E or Esc or Close button closes; Esc leaves the pointer free, E/Close relock. Evidence: cargo test --workspace ok, clippy (native + wasm32) clean, browser drive CHEST=1 CAM=90.5,77.8,110.5,270,5: window shows 9x3 with 11 stacks, 0 block edits by stage; screenshots chest-before/open/esc attached. Gaps: no item names/tooltips (unknown ids show number); double-chest top/bottom order unverified vs PE, no double chest in sample world (synthetic tests only); right-click doesn't close; entities.rs held_icon duplicates icon mapping (follow-up); move items = mem-834e; furnace/brewing progress not shown; drive stage timing-sensitive under SwiftShader.
