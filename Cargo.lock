@@ -2955,9 +2955,12 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "getrandom 0.3.4",
+ "js-sys",
  "mcpe-world",
  "png",
+ "wasm-bindgen",
  "web-sys",
+ "zip",
 ]
 
 [[package]]

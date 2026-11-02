@@ -86,7 +86,6 @@ impl WorldMap {
     /// The columns edited since the world was loaded or last saved, ready to
     /// be written: heights are recomputed from the blocks, everything else is
     /// as loaded.
-    #[cfg_attr(target_arch = "wasm32", allow(dead_code, reason = "the browser cannot save yet"))]
     pub fn edited_columns(&self) -> Vec<Column> {
         self.edited
             .iter()
@@ -98,8 +97,9 @@ impl WorldMap {
             .collect()
     }
 
-    /// Forgets the edits: they are now on disk.
-    #[cfg_attr(target_arch = "wasm32", allow(dead_code, reason = "the browser cannot save yet"))]
+    /// Forgets the edits: they are now on disk. (The browser's download
+    /// does not: each zip holds all edits since the page loaded.)
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code, reason = "the browser keeps its edits"))]
     pub fn mark_saved(&mut self) {
         self.edited.clear();
     }

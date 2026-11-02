@@ -17,6 +17,8 @@ mod buttons;
 mod catalog;
 mod controls;
 mod debug_view;
+#[cfg(any(target_arch = "wasm32", test))]
+mod download;
 mod entities;
 mod font;
 mod hotbar;
@@ -25,11 +27,11 @@ mod item_icons;
 mod menu;
 mod mesh;
 mod physics;
-#[cfg(not(target_arch = "wasm32"))]
 mod save;
 mod sign_editor;
 mod signs;
 mod targeting;
+mod toast;
 mod world;
 
 use bevy::asset::RenderAssetUsages;
@@ -62,7 +64,6 @@ fn main() {
     let map = WorldMap::new(world);
     let mut app = App::new();
     app.insert_resource(Solids::from_world(map.world())).insert_resource(map);
-    #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins(save::SavePlugin { dir });
     app
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -76,7 +77,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin))
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin, toast::ToastPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
@@ -108,11 +109,20 @@ fn world_dir_arg() -> Option<PathBuf> {
 fn load_world(dir: Option<&Path>) -> mcpe_world::Result<PeWorld> {
     match dir {
         Some(dir) => PeWorld::open_dir(dir),
-        None => {
-            let files = world_files::DB_FILES.iter().map(|(n, b)| (n.to_string(), b.to_vec()));
-            PeWorld::from_files(world_files::LEVEL_DAT, files)
-        }
+        None => PeWorld::from_files(world_files::LEVEL_DAT, embedded_db_files()),
     }
+}
+
+/// The files of the embedded world's `db/`.
+fn embedded_db_files() -> impl Iterator<Item = (String, Vec<u8>)> {
+    world_files::DB_FILES.iter().map(|(n, b)| (n.to_string(), b.to_vec()))
+}
+
+/// A writer over the embedded world, for saving it somewhere other than a
+/// directory (the browser's download).
+#[cfg(any(target_arch = "wasm32", test))]
+fn embedded_writer() -> mcpe_world::Result<mcpe_world::WorldWriter> {
+    mcpe_world::WorldWriter::from_files(world_files::LEVEL_DAT.to_vec(), embedded_db_files())
 }
 
 /// The embedded texture atlas, sampled without filtering to keep the pixels sharp.

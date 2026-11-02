@@ -8,9 +8,10 @@
 //! scene (see [`grab_pointer`]). Neither click edits a block: `targeting`
 //! ignores clicks while the pointer is free, and runs before this one.
 //!
-//! Save is a hook for the saving yak: it is greyed out until something sets
-//! [`SaveAvailable`], and then pressing it sends a [`SaveRequested`] message.
-//! Nothing here writes a world.
+//! Save is a hook for the saver (see `save`): it is greyed out until something
+//! sets [`SaveAvailable`], and then pressing it sends a [`SaveRequested`]
+//! message; the saver may also rename the button ([`SaveLabel`]). Nothing here
+//! writes a world.
 
 use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
@@ -21,6 +22,17 @@ use crate::controls::{grab_pointer, is_locked, set_locked, Modal};
 /// (and for good in read-only builds); the menu greys out Save while it is.
 #[derive(Resource, Default)]
 pub struct SaveAvailable(pub bool);
+
+/// What the Save button says while saving is available ("Download world
+/// (.zip)" in the browser).
+#[derive(Resource)]
+pub struct SaveLabel(pub &'static str);
+
+impl Default for SaveLabel {
+    fn default() -> Self {
+        Self("Save")
+    }
+}
 
 /// The player pressed Save while [`SaveAvailable`] was on.
 #[derive(Message)]
@@ -36,10 +48,10 @@ enum MenuAction {
 }
 
 impl MenuAction {
-    fn label(self, save_available: bool) -> &'static str {
+    fn label(self, save_available: bool, save_label: &'static str) -> &'static str {
         match self {
             Self::Resume => "Resume",
-            Self::Save if save_available => "Save",
+            Self::Save if save_available => save_label,
             Self::Save => "Save (not available)",
             Self::Controls => "Controls",
         }
@@ -69,7 +81,7 @@ pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<SaveAvailable>().add_message::<SaveRequested>().add_systems(Startup, spawn_menu).add_systems(
+        app.init_resource::<SaveAvailable>().init_resource::<SaveLabel>().add_message::<SaveRequested>().add_systems(Startup, spawn_menu).add_systems(
             Update,
             // After `grab_pointer`, so a press on Resume doesn't lock the
             // pointer before `targeting` has seen the click.
@@ -78,7 +90,7 @@ impl Plugin for MenuPlugin {
     }
 }
 
-fn spawn_menu(mut commands: Commands, save: Res<SaveAvailable>) {
+fn spawn_menu(mut commands: Commands, save: Res<SaveAvailable>, label: Res<SaveLabel>) {
     commands
         .spawn((
             MenuRoot,
@@ -106,7 +118,7 @@ fn spawn_menu(mut commands: Commands, save: Res<SaveAvailable>) {
                     Node { width: px(260), height: px(40), justify_content: JustifyContent::Center, align_items: AlignItems::Center, ..default() },
                     BackgroundColor(BUTTON),
                 ))
-                .with_child((Text::new(action.label(save.0)), TextFont { font_size: FontSize::Px(18.0), ..default() }, TextColor(TEXT)));
+                .with_child((Text::new(action.label(save.0, label.0)), TextFont { font_size: FontSize::Px(18.0), ..default() }, TextColor(TEXT)));
             }
             menu.spawn((
                 ControlsHelp,
@@ -148,6 +160,7 @@ fn press_buttons(
 /// Hover highlight, and Save's label and greying while it is unavailable.
 fn style_buttons(
     save: Res<SaveAvailable>,
+    save_label: Res<SaveLabel>,
     mut buttons: Query<(&Interaction, &MenuAction, &mut BackgroundColor, &Children)>,
     mut labels: Query<(&mut Text, &mut TextColor)>,
 ) {
@@ -161,7 +174,7 @@ fn style_buttons(
         background.set_if_neq(BackgroundColor(color));
         for &child in children {
             if let Ok((mut text, mut text_color)) = labels.get_mut(child) {
-                let label = action.label(save.0);
+                let label = action.label(save.0, save_label.0);
                 if text.0 != label {
                     text.0 = label.to_string();
                 }

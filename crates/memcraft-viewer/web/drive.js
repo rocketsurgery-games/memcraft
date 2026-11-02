@@ -19,6 +19,14 @@
 // must flip a lever or press a button, and that one edit is the only one
 // expected.
 //
+// With $CAM and $SAVE (use it instead of $LEVER) the drive instead breaks the
+// block in the crosshair, opens the menu and clicks its download button
+// (screenshots `save-menu.png`, then `saved.png` with the on-screen feedback),
+// stores the download as `world.zip` in the out dir, prints `SAVE_EDIT=x,y,z
+// old=id` for the block it broke, and resumes. The zip is then checked with
+// `cargo test -p memcraft-viewer -- --ignored drives_download` (see
+// src/download.rs), which wants the unzipped folder and that line's x,y,z.
+//
 // The menu hangs 200 px down: the buttons are 260x40 with
 // 10 px gaps under a title, so Resume and Controls sit at fixed places in a
 // 1280x720 viewport (see start.png).
@@ -61,7 +69,7 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   console.log(`drawing after ${(Date.now() - t0) / 1000}s`)
   await shot('start.png')
 
-  const RESUME = [640, 268], CONTROLS = [640, 368], SCENE = [200, 360]
+  const RESUME = [640, 268], SAVE = [640, 318], CONTROLS = [640, 368], SCENE = [200, 360]
   console.log('locked before click:', await locked())
   await page.mouse.click(...CONTROLS, { button: 'left' })
   await page.waitForTimeout(3000)
@@ -84,6 +92,30 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
     await page.waitForTimeout(500)
     await shot('lever-after.png')
     console.log('toggles logged after the right click:', logs.filter(l => /\btoggled /.test(l)))
+  }
+  if (process.env.SAVE) {
+    await page.waitForTimeout(3000)
+    await page.mouse.click(...SCENE, { button: 'left' })
+    await page.waitForTimeout(1000)
+    const broke = logs.map(l => /\bbroke \((\d+), \d+\) at \[(-?\d+), (-?\d+), (-?\d+)\]/.exec(l)).find(Boolean)
+    if (!broke) throw new Error('no block was broken')
+    console.log(`SAVE_EDIT=${broke.slice(2).join(',')} old=${broke[1]}`)
+    await page.evaluate(() => document.exitPointerLock())
+    await waitLock(false)
+    await page.waitForTimeout(3000)
+    await shot('save-menu.png')
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 60000 }),
+      page.mouse.click(...SAVE, { button: 'left' }),
+    ])
+    await download.saveAs(path.join(out, 'world.zip'))
+    console.log('downloaded:', download.suggestedFilename())
+    await shot('saved.png')
+    await page.waitForTimeout(6000)
+    await shot('saved-later.png') // the feedback has gone again
+    await page.mouse.click(...RESUME, { button: 'left' })
+    await waitLock(true)
+    console.log('locked after resuming from the save menu:', await locked())
   }
   // Turn right, with no button held.
   for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
@@ -108,7 +140,7 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await page.mouse.click(...RESUME, { button: 'left' })
   await waitLock(true)
   console.log('locked after clicking Resume:', await locked())
-  console.log(`block edits logged (must be ${process.env.LEVER ? 1 : 0}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
+  console.log(`block edits logged (must be ${(process.env.LEVER ? 1 : 0) + (process.env.SAVE ? 1 : 0)}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
   printLogs()
   await browser.close(); server.close()
 })().catch(e => { console.error(String(e).split('\n')[0]); printLogs(); process.exit(1) })

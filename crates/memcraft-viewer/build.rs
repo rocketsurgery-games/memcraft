@@ -179,6 +179,14 @@ fn world() {
         writeln!(out, "    ({name:?}, include_bytes!({p:?})),").unwrap();
     }
     writeln!(out, "];").unwrap();
+    // The other files a world folder is more than its database for (the name
+    // the world list shows), for the browser's download.
+    writeln!(out, "#[allow(dead_code)] // only the browser's download uses these").unwrap();
+    writeln!(out, "pub const EXTRA_FILES: &[(&str, &[u8])] = &[").unwrap();
+    if world.join("levelname.txt").is_file() {
+        writeln!(out, "    (\"levelname.txt\", include_bytes!({:?})),", world.join("levelname.txt")).unwrap();
+    }
+    writeln!(out, "];").unwrap();
     let dest = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("world_files.rs");
     std::fs::write(dest, out).unwrap();
 }
