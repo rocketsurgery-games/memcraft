@@ -10,6 +10,10 @@
 // left-click the scene, off the menu, and report whether the page holds the
 // pointer lock; move the mouse and screenshot `turned.png`; optionally hold
 // keys from $KEYS, a JSON list of [key, ms], and screenshot `moved.png`.
+// $VIEW ("x,y,z,yaw,pitch") starts the camera there (the page's `?view=`) and
+// skips the turn; $ACTIONS, a JSON list run once the pointer is locked, drives
+// the scene: ["click"] or ["rightclick"] at the screen centre, ["type", text],
+// ["press", key], ["wait", ms], ["shot", "name.png"], ["locked"] (logs the lock).
 // Then release the lock as Esc does (the menu must come back, `menu-back.png`),
 // and click the menu's Resume button to lock again. No click may edit a block.
 //
@@ -46,7 +50,8 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   const waitLock = (want) => page.waitForFunction(w => (document.pointerLockElement !== null) === w, want, { timeout: 20000 }).catch(() => {})
 
   const t0 = Date.now()
-  const url = /^https?:/.test(dir) ? dir : `http://localhost:${server.address().port}/`
+  const view = process.env.VIEW ? `?view=${process.env.VIEW}` : ''
+  const url = (/^https?:/.test(dir) ? dir : `http://localhost:${server.address().port}/`) + view
   await page.goto(url, { timeout: 120000 })
   await page.waitForFunction(() => !document.getElementById('loading'), null, { timeout: 180000 })
   await page.waitForTimeout(+(process.env.WAIT || 15000))
@@ -66,9 +71,21 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await waitLock(true)
   console.log('locked after left click:', await locked())
   // Turn right, with no button held.
-  for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
+  for (let i = 0; i < (process.env.VIEW ? 0 : 20); i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
   await page.waitForTimeout(3000)
   await shot('turned.png')
+
+  for (const [action, arg] of JSON.parse(process.env.ACTIONS || '[]')) {
+    if (action === 'click') await page.mouse.click(640, 360, { button: 'left' })
+    else if (action === 'rightclick') await page.mouse.click(640, 360, { button: 'right' })
+    else if (action === 'type') await page.keyboard.type(arg, { delay: 100 })
+    else if (action === 'press') await page.keyboard.press(arg)
+    else if (action === 'wait') await page.waitForTimeout(arg)
+    else if (action === 'shot') await shot(arg)
+    else if (action === 'locked') console.log(`locked after ${JSON.stringify(arg ?? '')}:`, await locked())
+    // Software-rendered frames are slow: let the viewer react to each step.
+    await page.waitForTimeout(2500)
+  }
 
   if (process.env.KEYS) {
     for (const [k, ms] of JSON.parse(process.env.KEYS)) {

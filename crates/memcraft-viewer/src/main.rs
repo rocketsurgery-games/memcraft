@@ -10,11 +10,16 @@
 mod blocks;
 mod catalog;
 mod controls;
+mod entities;
+mod font;
 mod hotbar;
 mod interact;
+mod item_icons;
 mod menu;
 mod mesh;
 mod physics;
+mod sign_editor;
+mod signs;
 mod targeting;
 mod world;
 
@@ -51,10 +56,12 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, menu::MenuPlugin))
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
+        // After `Startup`, so the world and materials `setup` inserts are there.
+        .add_systems(PostStartup, entities::spawn)
         .add_systems(Update, world::remesh)
         .run();
 }
@@ -125,8 +132,37 @@ fn setup(
     commands.insert_resource(WorldMap::new(world));
 }
 
+/// The direction of a view: Minecraft yaw 0 faces +Z and turns toward -X;
+/// positive pitch looks down. Radians.
+fn direction(yaw: f32, pitch: f32) -> Vec3 {
+    Vec3::new(-yaw.sin() * pitch.cos(), -pitch.sin(), yaw.cos() * pitch.cos())
+}
+
+/// In the browser, a page address ending in `?view=x,y,z,yaw,pitch` puts the
+/// camera at that spot (yaw and pitch in degrees as Minecraft counts them),
+/// to link to a place or to screenshot one.
+#[cfg(target_arch = "wasm32")]
+fn view_from_address() -> Option<Transform> {
+    let url = web_sys::window()?.document()?.url().ok()?;
+    let (_, query) = url.split_once('?')?;
+    let view = query.split('&').find_map(|pair| pair.strip_prefix("view="))?;
+    let [x, y, z, yaw, pitch] = view.split(',').map(|n| n.parse::<f32>()).collect::<Result<Vec<_>, _>>().ok()?[..] else {
+        return None;
+    };
+    let eye = Vec3::new(x, y, z);
+    Some(Transform::from_translation(eye).looking_at(eye + direction(yaw.to_radians(), pitch.to_radians()), Vec3::Y))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn view_from_address() -> Option<Transform> {
+    None
+}
+
 /// Starts at the local player's saved eye position and facing, or above spawn.
 fn start_view(world: &PeWorld) -> Transform {
+    if let Some(view) = view_from_address() {
+        return view;
+    }
     let player = world.players.get("~local_player");
     let floats = |k: &str| -> Vec<f32> {
         player
@@ -143,12 +179,11 @@ fn start_view(world: &PeWorld) -> Transform {
             Vec3::new(x as f32, y as f32 + 20.0, z as f32)
         }
     };
-    // Minecraft yaw 0 faces +Z and turns toward -X; positive pitch looks down.
     let (yaw, pitch) = match rot[..] {
         [yaw, pitch] => (yaw.to_radians(), pitch.to_radians()),
         _ => (0.0, 0.3),
     };
-    let dir = Vec3::new(-yaw.sin() * pitch.cos(), -pitch.sin(), yaw.cos() * pitch.cos());
+    let dir = direction(yaw, pitch);
     // Step back and up from the exact eye position, so the first frame shows
     // the surroundings rather than whatever the player was standing against.
     let flat = Vec3::new(dir.x, 0.0, dir.z).normalize_or_zero();
