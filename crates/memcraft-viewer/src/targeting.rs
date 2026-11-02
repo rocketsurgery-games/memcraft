@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn rays_find_blocks_of_the_real_world_across_a_column_seam() {
-        let mut map = WorldMap::new(crate::load_world());
+        let mut map = WorldMap::new(crate::load_world(None).unwrap());
         // Clear a corridor through two columns (x = 47 and 48 are in different
         // ones), then close it with stone.
         for x in 44..=52 {

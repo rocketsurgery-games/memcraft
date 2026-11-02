@@ -146,7 +146,7 @@ mod tests {
     /// the way: the mesh, and whether the player fits in the doorway.
     #[test]
     fn opening_a_door_of_the_world_remeshes_it_and_lets_the_player_through() {
-        let mut map = WorldMap::new(crate::load_world());
+        let mut map = WorldMap::new(crate::load_world(None).unwrap());
         let mut solids = Solids::from_world(map.world());
         let columns: Vec<_> = map.world().columns.values().collect();
         let door = columns

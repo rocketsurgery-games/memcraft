@@ -28,6 +28,9 @@ pub struct WorldMap {
     heights: HashMap<ChunkPos, [i32; 256]>,
     /// Columns to remesh.
     dirty: BTreeSet<ChunkPos>,
+    /// Columns whose blocks changed since the world was loaded or last saved
+    /// (unlike `dirty`, not their neighbours).
+    edited: BTreeSet<ChunkPos>,
 }
 
 impl WorldMap {
@@ -35,10 +38,9 @@ impl WorldMap {
     pub fn new(world: PeWorld) -> Self {
         let heights = world.columns.iter().map(|(pos, col)| (*pos, std::array::from_fn(|i| column_height(col, i % 16, i / 16)))).collect();
         let dirty = world.columns.keys().copied().collect();
-        Self { world, heights, dirty }
+        Self { world, heights, dirty, edited: BTreeSet::new() }
     }
 
-    #[allow(dead_code, reason = "only the tests need it so far")]
     pub fn world(&self) -> &PeWorld {
         &self.world
     }
@@ -62,6 +64,7 @@ impl WorldMap {
         self.heights.get_mut(&pos).unwrap()[lz * 16 + lx] = column_height(col, lx, lz);
 
         self.dirty.insert(pos);
+        self.edited.insert(pos);
         // Faces on the far side of a column edge belong to the neighbour.
         for (on_edge, dx, dz) in [(lx == 0, -1, 0), (lx == 15, 1, 0), (lz == 0, 0, -1), (lz == 15, 0, 1)] {
             let n = ChunkPos { x: pos.x + dx, z: pos.z + dz };
@@ -72,8 +75,29 @@ impl WorldMap {
         true
     }
 
+    /// The columns edited since the world was loaded or last saved, ready to
+    /// be written: heights are recomputed from the blocks, everything else is
+    /// as loaded.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code, reason = "the browser cannot save yet"))]
+    pub fn edited_columns(&self) -> Vec<Column> {
+        self.edited
+            .iter()
+            .map(|pos| {
+                let mut col = self.world.columns[pos].clone();
+                col.recompute_heights();
+                col
+            })
+            .collect()
+    }
+
+    /// Forgets the edits: they are now on disk.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code, reason = "the browser cannot save yet"))]
+    pub fn mark_saved(&mut self) {
+        self.edited.clear();
+    }
+
     /// Brightness (0..1) of the air block at `(x, y, z)`, which a face looks into.
-    fn light(&self, x: i32, y: i32, z: i32) -> f32 {
+    pub fn light(&self, x: i32, y: i32, z: i32) -> f32 {
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
         match self.heights.get(&pos) {
             Some(h) if y <= h[(z.rem_euclid(16) * 16 + x.rem_euclid(16)) as usize] => SHADOW,
@@ -116,7 +140,7 @@ fn linear(c: [f32; 4]) -> [f32; 4] {
     [f(c[0]), f(c[1]), f(c[2]), c[3]]
 }
 
-fn to_bevy(m: MeshData) -> Mesh {
+pub fn to_bevy(m: MeshData) -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD)
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, m.positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, m.normals)
@@ -177,7 +201,7 @@ mod tests {
 
     #[test]
     fn editing_a_block_remeshes_its_column_and_the_neighbour_across_an_edge() {
-        let mut map = WorldMap::new(crate::load_world());
+        let mut map = WorldMap::new(crate::load_world(None).unwrap());
         let mut solids = Solids::from_world(map.world());
         map.dirty.clear();
 

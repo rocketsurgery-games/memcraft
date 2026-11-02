@@ -1,5 +1,5 @@
-//! Embeds the sample world and the texture atlas in the binary, so the browser
-//! build needs no file loading. `MEMCRAFT_WORLD` overrides which world
+//! Embeds the sample world, the texture atlas and the painting picture in the
+//! binary, so the browser build needs no file loading. `MEMCRAFT_WORLD` overrides which world
 //! directory is used.
 
 use std::fmt::Write;
@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 fn main() {
     atlas();
+    paintings();
     world();
 }
 
@@ -130,6 +131,28 @@ fn atlas() {
     }
     writeln!(src, "}}").unwrap();
     std::fs::write(out.join("atlas.rs"), src).unwrap();
+}
+
+/// Embeds `assets/paintings/*.png` (the picture all painting motifs are cut
+/// from) as raw RGBA, with its size.
+fn paintings() {
+    let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let path = manifest.join("assets/paintings/paintings_kristoffer_zetterstrand.png");
+    println!("cargo:rerun-if-changed={}", path.display());
+    let mut decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(&path).unwrap()));
+    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = decoder.read_info().unwrap();
+    let mut buf = vec![0; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut buf).unwrap();
+    assert_eq!(info.color_type, png::ColorType::Rgba, "{}: expected RGBA", path.display());
+    let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    std::fs::write(out.join("paintings.rgba"), &buf[..info.buffer_size()]).unwrap();
+    let mut src = String::new();
+    writeln!(src, "pub const WIDTH: u32 = {};", info.width).unwrap();
+    writeln!(src, "pub const HEIGHT: u32 = {};", info.height).unwrap();
+    writeln!(src, "/// Raw RGBA8 (sRGB) pixels, `WIDTH` x `HEIGHT`.").unwrap();
+    writeln!(src, "pub static RGBA: &[u8] = include_bytes!(concat!(env!(\"OUT_DIR\"), \"/paintings.rgba\"));").unwrap();
+    std::fs::write(out.join("paintings.rs"), src).unwrap();
 }
 
 fn world() {
