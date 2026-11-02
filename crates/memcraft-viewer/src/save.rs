@@ -233,7 +233,7 @@ mod tests {
         }
 
         // The backup is the old db/, byte for byte, and the live db/ differs.
-        assert_eq!(backups(dir), [saved.backup.clone()]);
+        assert_eq!(backups(dir), std::slice::from_ref(&saved.backup));
         assert_eq!(saved.backup.parent().unwrap(), dir);
         assert_eq!(files(&saved.backup), original);
         assert_ne!(files(&dir.join("db")), original);
