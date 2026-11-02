@@ -8,7 +8,8 @@
 //! face that was hit (see [`can_place`]), and [`PICK_BUTTON`] copies the block
 //! into the selected hotbar slot. The buttons live in `controls`.
 //!
-//! Every block is treated as a full cube here, whatever its shape.
+//! Every block is treated as a full cube here, whatever its shape. What a
+//! placed block turns out as, and the cells it takes, is `orient`'s rule.
 
 use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
@@ -19,6 +20,7 @@ use crate::buttons::{press_ticks, PendingReleases, POWERED};
 use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PICK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
 use crate::interact::interact;
+use crate::orient::orient;
 use crate::physics::{Solids, EYE_HEIGHT, HALF_WIDTH, HEIGHT_BLOCKS};
 use crate::sign_editor::EditSign;
 use crate::signs;
@@ -156,6 +158,31 @@ fn can_place(existing: Block, block: Block, cell: IVec3, player: (Vec3, Vec3)) -
     !overlaps
 }
 
+/// How far up its block the ray meets the face `hit` (0..1): where on the
+/// face the click landed, for blocks that go in the upper or lower half.
+fn hit_height(origin: Vec3, dir: Vec3, hit: Hit) -> f32 {
+    let axis = if hit.normal.x != 0 { 0 } else if hit.normal.y != 0 { 1 } else { 2 };
+    let plane = hit.block[axis] + i32::from(hit.normal[axis] > 0);
+    let y = origin.y + (plane as f32 - origin[axis]) / dir[axis] * dir.y;
+    if y.is_finite() { (y - hit.block.y as f32).clamp(0.0, 1.0) } else { 0.0 }
+}
+
+/// The cells that placing `block` against `hit` fills, with what goes in each,
+/// or none if it can't be placed: some cell is outside the loaded world
+/// (`at` gives no block there) or not free (see [`can_place`]).
+fn placement(
+    block: Block,
+    hit: Hit,
+    height: f32,
+    yaw: f32,
+    player: (Vec3, Vec3),
+    at: impl Fn(IVec3) -> Option<Block>,
+) -> Vec<(IVec3, Block)> {
+    let cells: Vec<_> = orient(block, hit.normal, height, yaw).into_iter().map(|(offset, b)| (hit.front() + offset, b)).collect();
+    let free = cells.iter().all(|&(cell, b)| at(cell).is_some_and(|existing| can_place(existing, b, cell, player)));
+    if free { cells } else { Vec::new() }
+}
+
 /// Clicks: the left button breaks the targeted block, the right one uses it
 /// (a door opens, a lever flips, a button goes down, a sign's editor opens) or, if it does nothing, places a block against it.
 #[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or message it uses
@@ -200,13 +227,16 @@ fn edit_blocks(
             return;
         }
         let (transform, controller) = *camera;
-        let (cell, Some(block)) = (hit.front(), hotbar.selected_block()) else {
+        let Some(block) = hotbar.selected_block() else {
             return;
         };
-        if can_place(map.block(cell.x, cell.y, cell.z), block, cell, player_box(controller.mode, transform.translation))
-            && world::set_block(&mut map, &mut solids, cell.x, cell.y, cell.z, block.0, block.1)
-        {
-            info!("placed {block:?} at {cell}");
+        let height = hit_height(transform.translation, *transform.forward(), hit);
+        let player = player_box(controller.mode, transform.translation);
+        let cells = placement(block, hit, height, controller.yaw(), player, |c| map.holds(c).then(|| map.block(c.x, c.y, c.z)));
+        for (cell, placed) in cells {
+            if world::set_block(&mut map, &mut solids, cell.x, cell.y, cell.z, placed.0, placed.1) {
+                info!("placed {placed:?} at {cell}");
+            }
         }
     }
 }
@@ -518,5 +548,68 @@ mod tests {
         assert!(can_place((31, 1), STONE, cell, far), "tall grass");
         assert!(!can_place(STONE, STONE, cell, far));
         assert!(!can_place((50, 5), STONE, cell, far), "torch");
+    }
+
+    const FAR: (Vec3, Vec3) = (Vec3::splat(-100.0), Vec3::splat(-99.0));
+
+    /// The world is air everywhere except at the given cells.
+    fn air_but(solid: &[IVec3]) -> impl Fn(IVec3) -> Option<Block> + '_ {
+        move |c| Some(if solid.contains(&c) { STONE } else { AIR })
+    }
+
+    #[test]
+    fn the_height_of_a_click_is_read_off_the_face_it_met() {
+        // Looking along +x, level with a quarter of the way up block (3, 5, 0).
+        let side = Hit { block: IVec3::new(3, 5, 0), normal: IVec3::NEG_X };
+        assert_eq!(hit_height(Vec3::new(0.0, 5.25, 0.5), Vec3::X, side), 0.25);
+        // Rising 1 for every 3 along: at the face, 3 along, it is a block higher.
+        let h = hit_height(Vec3::new(0.0, 5.0, 0.5), Vec3::new(3.0, 1.0, 0.0), side);
+        assert!((h - 1.0).abs() < 1e-5, "{h}");
+        // A face towards -z, looking down: 2 along and 1 down from y = 65 is the block's foot.
+        let north_face = Hit { block: IVec3::new(0, 64, 10), normal: IVec3::NEG_Z };
+        let h = hit_height(Vec3::new(0.5, 65.0, 8.0), Vec3::new(0.0, -0.5, 1.0), north_face);
+        assert!((h - 0.0).abs() < 1e-5, "{h}");
+        // On the underside and the top, the height is 0 and 1.
+        let top = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::Y };
+        assert_eq!(hit_height(Vec3::new(0.5, 70.0, 0.5), Vec3::NEG_Y, top), 1.0);
+        let under = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::NEG_Y };
+        assert_eq!(hit_height(Vec3::new(0.5, 60.0, 0.5), Vec3::Y, under), 0.0);
+    }
+
+    #[test]
+    fn a_door_takes_two_cells_and_both_must_be_free() {
+        let hit = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::Y };
+        let cells = placement((64, 0), hit, 1.0, 0.0, FAR, air_but(&[]));
+        assert_eq!(cells, vec![(IVec3::new(0, 65, 0), (64, 3)), (IVec3::new(0, 66, 0), (64, 8))]);
+        // Stone where the upper half goes, or the world ends there: nothing at all.
+        assert!(placement((64, 0), hit, 1.0, 0.0, FAR, air_but(&[IVec3::new(0, 66, 0)])).is_empty());
+        let edge = |c: IVec3| (c.y < 66).then_some(AIR);
+        assert!(placement((64, 0), hit, 1.0, 0.0, FAR, edge).is_empty());
+        // The lower half is taken: also nothing.
+        assert!(placement((64, 0), hit, 1.0, 0.0, FAR, air_but(&[IVec3::new(0, 65, 0)])).is_empty());
+        // The player standing in the upper half's cell blocks it.
+        let player = player_box(Mode::Walk, Vec3::new(0.5, 66.0 + EYE_HEIGHT, 0.5));
+        assert!(placement((64, 0), hit, 1.0, 0.0, player, air_but(&[])).is_empty());
+    }
+
+    #[test]
+    fn a_bed_takes_the_cell_ahead_for_its_head() {
+        // Looking east (yaw -90 degrees), the head is the next cell to +x.
+        let hit = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::Y };
+        let yaw = -std::f32::consts::FRAC_PI_2;
+        let cells = placement((26, 0), hit, 1.0, yaw, FAR, air_but(&[]));
+        assert_eq!(cells, vec![(IVec3::new(0, 65, 0), (26, 3)), (IVec3::new(1, 65, 0), (26, 3 | 8))]);
+        assert!(placement((26, 0), hit, 1.0, yaw, FAR, air_but(&[IVec3::new(1, 65, 0)])).is_empty());
+    }
+
+    #[test]
+    fn a_single_block_is_oriented_in_the_cell_in_front_of_the_face() {
+        let hit = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::X };
+        let cells = placement((17, 2), hit, 0.5, 0.0, FAR, air_but(&[]));
+        assert_eq!(cells, vec![(IVec3::new(1, 64, 0), (17, 2 | 4))]);
+        assert!(placement((17, 2), hit, 0.5, 0.0, FAR, air_but(&[IVec3::new(1, 64, 0)])).is_empty());
+        // Nothing to place against: a ladder on a floor.
+        let floor = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::Y };
+        assert!(placement((65, 2), floor, 0.5, 0.0, FAR, air_but(&[])).is_empty());
     }
 }

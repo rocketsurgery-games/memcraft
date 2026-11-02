@@ -27,6 +27,7 @@ mod interact;
 mod item_icons;
 mod menu;
 mod mesh;
+mod orient;
 mod physics;
 mod picker;
 mod save;

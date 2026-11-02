@@ -343,9 +343,16 @@ pub fn look(id: u8, data: u8) -> Look {
         42 => solid(all(t::IRON_BLOCK)),
         43 => solid(slab_tiles(data)),
         181 => solid(column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM)),
-        44 => slab(0.5, slab_tiles(data)),
-        182 => slab(0.5, column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM)),
-        158 => slab(0.5, all(PLANKS[(d & 7) % 6])),
+        // Slabs are `Partial` boxes up from the floor, or `Boxes` for the upper half.
+        44 | 158 | 182 | 205 => {
+            let tiles = match id {
+                44 => slab_tiles(data),
+                182 => column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM),
+                158 => all(PLANKS[(d & 7) % 6]),
+                _ => all(t::PURPUR_BLOCK),
+            };
+            if data & 8 != 0 { boxy(Layer::Opaque, tiles) } else { slab(0.5, tiles) }
+        }
         45 => solid(all(t::BRICKS)),
         46 => solid(column(t::TNT_TOP, t::TNT_SIDE, t::TNT_BOTTOM)),
         47 => solid(column(t::OAK_PLANKS, t::BOOKSHELF, t::OAK_PLANKS)),
@@ -471,7 +478,7 @@ pub fn look(id: u8, data: u8) -> Look {
         179 => solid(column(t::RED_SANDSTONE_TOP, t::RED_SANDSTONE, t::RED_SANDSTONE_BOTTOM)),
         198 => slab(0.9375, column(t::GRASS_PATH_TOP, t::GRASS_PATH_SIDE, t::DIRT)),
         199 => AIR, // item frame: drawn as an entity in later versions
-        201 | 204 | 205 => solid(all(t::PURPUR_BLOCK)),
+        201 | 204 => solid(all(t::PURPUR_BLOCK)),
         202 => solid(column(t::PURPUR_PILLAR_TOP, t::PURPUR_PILLAR, t::PURPUR_PILLAR_TOP)),
         241 => glassy(STAINED_GLASS[d]),
         243 => solid(column(t::PODZOL_TOP, t::PODZOL_SIDE, t::DIRT)),
@@ -591,19 +598,20 @@ fn near_dir(near: Near, dir: usize) -> (u8, u8) {
     near(DIRS[dir].0, 0, DIRS[dir].1)
 }
 
-fn is_door(id: u8) -> bool {
+pub fn is_door(id: u8) -> bool {
     matches!(id, 64 | 71 | 193..=197)
 }
 
-fn is_gate(id: u8) -> bool {
+pub fn is_gate(id: u8) -> bool {
     matches!(id, 107 | 183..=187)
 }
 
-fn is_stairs(id: u8) -> bool {
+pub fn is_stairs(id: u8) -> bool {
     matches!(id, 53 | 67 | 108 | 109 | 114 | 128 | 134..=136 | 156 | 163 | 164 | 180 | 203)
 }
 
-/// The box list of a [`Shape::Boxes`] block; empty for any other block.
+/// The box list of a [`Shape::Boxes`] block; empty for any other block (a
+/// slab is one only in its upper half, data bit 8).
 pub fn model(id: u8, data: u8, near: Near) -> Model {
     match id {
         64 | 71 | 193..=197 => door(data, near),
@@ -614,6 +622,7 @@ pub fn model(id: u8, data: u8, near: Near) -> Model {
         139 => wall(near),
         101 | 102 | 160 => pane(near),
         53 | 67 | 108 | 109 | 114 | 128 | 134..=136 | 156 | 163 | 164 | 180 | 203 => stairs(data, near),
+        44 | 158 | 182 | 205 if data & 8 != 0 => Model::solid(Boxes::of(&[[0, 8, 0, 16, 16, 16]])),
         63 => standing_sign(data),
         68 => wall_sign(data),
         65 => ladder(data),
@@ -955,6 +964,21 @@ mod tests {
         assert_eq!(&*model(96, 4, &near).visual, &[[0, 13, 0, 16, 16, 16]]);
         // Open, facing east: it hangs on the west.
         assert_eq!(&*model(96, 8, &near).visual, &[[0, 0, 0, 3, 16, 16]]);
+    }
+
+    #[test]
+    fn slabs_fill_the_lower_half_or_with_bit_8_the_upper() {
+        let near = around([]);
+        for id in [44, 158, 182, 205] {
+            assert_eq!(look(id, 0).shape, Shape::Partial(0.5), "{id}");
+            assert!(model(id, 0, &near).visual.is_empty(), "{id}");
+            assert_eq!(look(id, 8).shape, Shape::Boxes, "{id}");
+            let top = model(id, 8, &near);
+            assert_eq!(&*top.visual, &[[0, 8, 0, 16, 16, 16]]);
+            assert_eq!(top.collision, top.visual);
+        }
+        // The material is the same either way.
+        assert_eq!(look(44, 3).tiles, look(44, 8 | 3).tiles);
     }
 
     #[test]

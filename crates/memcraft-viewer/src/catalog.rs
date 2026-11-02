@@ -244,6 +244,8 @@ fn build() -> Vec<Entry> {
     b.one(92, 0, "Cake");
     b.one(140, 0, "Flower Pot");
     b.one(65, 2, "Ladder");
+    // Placing one gives a standing sign on a floor and a wall sign on a wall (see `orient`).
+    b.one(63, 0, "Sign");
     b.one(50, 5, "Torch");
     b.one(89, 0, "Glowstone");
     b.one(169, 0, "Sea Lantern");

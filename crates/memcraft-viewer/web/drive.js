@@ -38,6 +38,16 @@
 // then picks the block under the crosshair into the same slot
 // (`picker-pickblock.png`; the log says which).
 //
+// With $CAM and $ORIENT (instead of the stages above), the drive places blocks
+// the way a player would and screenshots each (`orient-0.png`, ...). $ORIENT
+// is a JSON list of steps `[search, turnX, turnY, cells]`: pick the first block
+// the picker finds for `search` (null keeps the slot's block), turn the camera by
+// the mouse deltas (pixels; 0.2 degrees each), right-click the crosshair, and
+// expect `cells` block edits (2 for a door; default 1; 0 for a step that only
+// looks, no click) after holding the keys of an optional fifth element, a JSON
+// list of [key, ms] like $KEYS. Orientation comes from
+// the face the crosshair meets and where the camera looks (see src/orient.rs).
+//
 // The menu hangs 200 px down: the buttons are 260x40 with
 // 10 px gaps under a title, so Resume and Controls sit at fixed places in a
 // 1280x720 viewport (see start.png).
@@ -169,6 +179,62 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
     await shot('picker-pickblock.png')
     console.log('picks logged:', logs.filter(l => /\bpicked /.test(l)))
   }
+  let orientCells = 0
+  if (process.env.ORIENT) {
+    await page.waitForTimeout(3000)
+    const FIRST = [431 + 19, 141 + 19] // the first cell of the picker's grid
+    let [mx, my] = SCENE
+    const steps = JSON.parse(process.env.ORIENT)
+    for (const [i, [search, dx = 0, dy = 0, cells = 1, keys = []]] of steps.entries()) {
+      if (search) {
+        // The picker's frames are slow to arrive in software rendering, so a
+        // keystroke or click is sometimes lost: try again until it picks.
+        const picked = () => logs.filter(l => /\bpicked /.test(l)).length
+        for (let attempt = 0, before = picked(); attempt < 4 && picked() === before; attempt++) {
+          if (attempt) {
+            // The pointer is free after Esc: lock it again, as the player would.
+            await page.mouse.move(...SCENE)
+            await page.waitForTimeout(1000)
+            await page.mouse.click(...SCENE, { button: 'left' })
+            await waitLock(true)
+            await page.waitForTimeout(2000)
+          }
+          await page.keyboard.press('b')
+          await waitLock(false)
+          await page.waitForTimeout(3000)
+          await page.keyboard.type(search, { delay: 150 })
+          await page.waitForTimeout(4000)
+          await shot(`orient-${i}-picker${attempt || ''}.png`)
+          await page.mouse.click(...FIRST, { button: 'left' })
+          await page.waitForTimeout(3000)
+          await page.keyboard.press('Escape')
+          await page.waitForTimeout(1500)
+        }
+        await page.mouse.move(...SCENE)
+        await page.waitForTimeout(1000)
+        await page.mouse.click(...SCENE, { button: 'left' })
+        await waitLock(true)
+        ;[mx, my] = SCENE
+        await page.waitForTimeout(2000)
+      }
+      // Turn in small steps, one frame's worth each.
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / 20))
+      for (let k = 0; k < n && (dx || dy); k++) {
+        mx += dx / n; my += dy / n
+        await page.mouse.move(mx, my)
+        await page.waitForTimeout(80)
+      }
+      for (const [k, ms] of keys) {
+        await page.keyboard.down(k); await page.waitForTimeout(ms); await page.keyboard.up(k)
+      }
+      await page.waitForTimeout(2500)
+      if (cells > 0) await page.mouse.click(...SCENE, { button: 'right' })
+      await page.waitForTimeout(2500)
+      await shot(`orient-${i}.png`)
+      orientCells += cells
+    }
+    console.log('placed:', logs.filter(l => /\bplaced /.test(l)))
+  }
   // Turn right, with no button held.
   for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
   await page.waitForTimeout(3000)
@@ -192,7 +258,7 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await page.mouse.click(...RESUME, { button: 'left' })
   await waitLock(true)
   console.log('locked after clicking Resume:', await locked())
-  console.log(`block edits logged (must be ${(process.env.LEVER ? 1 : 0) + (process.env.SAVE ? 1 : 0) + (process.env.PICKER ? 1 : 0)}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
+  console.log(`block edits logged (must be ${(process.env.LEVER ? 1 : 0) + (process.env.SAVE ? 1 : 0) + (process.env.PICKER ? 1 : 0) + orientCells}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
   printLogs()
   await browser.close(); server.close()
 })().catch(e => { console.error(String(e).split('\n')[0]); printLogs(); process.exit(1) })

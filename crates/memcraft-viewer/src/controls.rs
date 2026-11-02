@@ -86,6 +86,12 @@ impl Controller {
         self.pitch = (self.pitch - delta.y * self.sensitivity).clamp(-FRAC_PI_2, FRAC_PI_2);
     }
 
+    /// Which way the camera is turned about the vertical axis, in radians
+    /// (zero looks along -z, a positive turn goes towards -x).
+    pub fn yaw(&self) -> f32 {
+        self.yaw
+    }
+
     fn rotation(&self) -> Quat {
         Quat::from_euler(EulerRot::YXZ, self.yaw, self.pitch, 0.0)
     }

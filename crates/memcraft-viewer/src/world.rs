@@ -53,6 +53,12 @@ impl WorldMap {
         self.world.block(x, y, z)
     }
 
+    /// Whether `cell` is inside the loaded world, where [`WorldMap::set_block`]
+    /// can change it.
+    pub fn holds(&self, cell: IVec3) -> bool {
+        (0..HEIGHT as i32).contains(&cell.y) && self.world.columns.contains_key(&column_of(cell))
+    }
+
     /// Sets the block at `(x, y, z)` and marks what must be remeshed.
     /// Returns false (and changes nothing) outside the loaded world.
     pub fn set_block(&mut self, x: i32, y: i32, z: i32, id: u8, data: u8) -> bool {
