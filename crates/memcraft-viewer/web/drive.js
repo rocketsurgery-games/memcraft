@@ -13,6 +13,12 @@
 // Then release the lock as Esc does (the menu must come back, `menu-back.png`),
 // and click the menu's Resume button to lock again. No click may edit a block.
 //
+// With $CAM (`x,y,z,yaw,pitch`: the start camera, see src/debug_view.rs) the
+// page starts there; with $LEVER also set, the drive then right-clicks the
+// crosshair once (screenshots `lever-before.png`, `lever-after.png`), which
+// must flip a lever or press a button, and that one edit is the only one
+// expected.
+//
 // The menu hangs 200 px down: the buttons are 260x40 with
 // 10 px gaps under a title, so Resume and Controls sit at fixed places in a
 // 1280x720 viewport (see start.png).
@@ -21,7 +27,8 @@ const http = require('http'), fs = require('fs'), path = require('path')
 const [dir, out] = process.argv.slice(2)
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.wasm': 'application/wasm' }
 const server = http.createServer((req, res) => {
-  const p = path.join(dir, req.url === '/' ? 'index.html' : req.url.split('?')[0])
+  const url = req.url.split('?')[0]
+  const p = path.join(dir, url === '/' ? 'index.html' : url)
   fs.readFile(p, (e, b) => {
     if (e) { res.statusCode = 404; return res.end() }
     res.setHeader('Content-Type', types[path.extname(p)] || 'application/octet-stream')
@@ -46,7 +53,8 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   const waitLock = (want) => page.waitForFunction(w => (document.pointerLockElement !== null) === w, want, { timeout: 20000 }).catch(() => {})
 
   const t0 = Date.now()
-  const url = /^https?:/.test(dir) ? dir : `http://localhost:${server.address().port}/`
+  const base = /^https?:/.test(dir) ? dir : `http://localhost:${server.address().port}/`
+  const url = process.env.CAM ? `${base}?cam=${process.env.CAM}` : base
   await page.goto(url, { timeout: 120000 })
   await page.waitForFunction(() => !document.getElementById('loading'), null, { timeout: 180000 })
   await page.waitForTimeout(+(process.env.WAIT || 15000))
@@ -62,9 +70,21 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await page.mouse.click(...CONTROLS, { button: 'left' })
   await page.waitForTimeout(1000)
   console.log('locked after clicking Controls again (must be null):', await locked())
+  // Move there first and let frames pass: motion that arrives with the lock
+  // would turn the view (440 px is 28 degrees), and a lever drive aims by $CAM.
+  await page.mouse.move(...SCENE)
+  await page.waitForTimeout(3000)
   await page.mouse.click(...SCENE, { button: 'left' })
   await waitLock(true)
   console.log('locked after left click:', await locked())
+  if (process.env.LEVER) {
+    await page.waitForTimeout(3000)
+    await shot('lever-before.png')
+    await page.mouse.click(...SCENE, { button: 'right' })
+    await page.waitForTimeout(500)
+    await shot('lever-after.png')
+    console.log('toggles logged after the right click:', logs.filter(l => /\btoggled /.test(l)))
+  }
   // Turn right, with no button held.
   for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
   await page.waitForTimeout(3000)
@@ -88,7 +108,7 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await page.mouse.click(...RESUME, { button: 'left' })
   await waitLock(true)
   console.log('locked after clicking Resume:', await locked())
-  console.log('block edits logged (must be 0):', logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
+  console.log(`block edits logged (must be ${process.env.LEVER ? 1 : 0}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
   printLogs()
   await browser.close(); server.close()
 })().catch(e => { console.error(String(e).split('\n')[0]); printLogs(); process.exit(1) })

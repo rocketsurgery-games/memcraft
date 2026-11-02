@@ -22,7 +22,7 @@ crates/memcraft-viewer/web/build.sh              # browser build -> crates/memcr
 python3 -m http.server -d crates/memcraft-viewer/web/dist
 ```
 
-Controls: click to capture the mouse (Esc releases it and opens the menu: Resume, Save once saving exists, and a controls help; the other controls only act while the mouse is captured), WASD to move, Q/E for down/up, Shift to go fast, scroll to change speed, F to switch between flying and walking (walking has gravity and solid blocks; Space jumps), 1-9 to choose a block in the hotbar, left click to break the block in the crosshair, right click to open or close a door, trapdoor or fence gate, or else to place the selected block against the block in the crosshair. Blocks are textured with Pixel Perfection by XSSheep (CC BY-SA 4.0, see `crates/memcraft-viewer/assets/ATTRIBUTION.md`); blocks the pack doesn't cover fall back to flat colours. The browser build needs `rustup target add wasm32-unknown-unknown` and a `wasm-bindgen-cli` matching the version in `Cargo.lock`.
+Controls: click to capture the mouse (Esc releases it and opens the menu: Resume, Save once saving exists, and a controls help; the other controls only act while the mouse is captured), WASD to move, Q/E for down/up, Shift to go fast, scroll to change speed, F to switch between flying and walking (walking has gravity and solid blocks; Space jumps), 1-9 to choose a block in the hotbar, left click to break the block in the crosshair, right click to open or close a door, trapdoor or fence gate, flip a lever or press a button (it pops back after a second or so), or else to place the selected block against the block in the crosshair. Blocks are textured with Pixel Perfection by XSSheep (CC BY-SA 4.0, see `crates/memcraft-viewer/assets/ATTRIBUTION.md`); blocks the pack doesn't cover fall back to flat colours. The browser build needs `rustup target add wasm32-unknown-unknown` and a `wasm-bindgen-cli` matching the version in `Cargo.lock`.
 
 On a fresh Debian/Ubuntu machine (e.g. a cloud runner), `sh scripts/runner-setup.sh` installs everything above, plus Playwright's Chromium for a headless smoke test of the browser build:
 
@@ -31,6 +31,12 @@ NODE_PATH=~/tools/drive/node_modules node crates/memcraft-viewer/web/drive.js cr
 ```
 
 It reports whether a click takes the pointer lock and whether releasing it works, and screenshots the menu (`menu.png`, `menu-controls.png`, `menu-back.png`) and the view before and after turning.
+
+To look at one place instead, start the page (or a native run, through the
+`MEMCRAFT_CAM` environment variable) with `?cam=x,y,z,yaw,pitch`, as in
+`CAM=119.5,66,12.5,180,12 LEVER=1`: the drive then right-clicks the crosshair
+once and screenshots `lever-before.png` and `lever-after.png` (that spot is a
+lever of the sample world).
 
 ## Crates
 

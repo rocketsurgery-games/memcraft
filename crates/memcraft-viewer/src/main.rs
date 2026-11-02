@@ -5,12 +5,14 @@
 //! it and opens the menu), WASD to move, Q/E down/up, Shift to go fast,
 //! scroll to change speed,
 //! F to switch between flying and walking (Space jumps), 1-9 to choose a block,
-//! left click to break the block in the crosshair, right click to place one.
+//! left click to break the block in the crosshair, right click to use a door,
+//! lever or button, or else to place one.
 
 mod blocks;
 mod buttons;
 mod catalog;
 mod controls;
+mod debug_view;
 mod hotbar;
 mod interact;
 mod menu;
@@ -106,7 +108,7 @@ fn setup(
         translucent: material(AlphaMode::Blend),
     });
 
-    let view = start_view(&world);
+    let view = debug_view::requested().unwrap_or_else(|| start_view(&world));
     commands.spawn((
         Camera3d::default(),
         // Colours are baked and final; tonemapping would only shift them
