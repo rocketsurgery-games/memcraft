@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T16:25:13Z'
-updated: '2026-11-01T23:24:32Z'
+updated: '2026-11-02T00:02:38Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -77,3 +77,31 @@ Decision: the backup is `<world dir>/db.backup-YYYYMMDD-HHMMSS[-n]` (UTC), insid
 - A sibling of the world dir would show up as another world in PE's worlds folder.
 - A save with no edited columns writes nothing and makes no backup. Backups are never pruned (follow-up).
 - Rejected: backing up by renaming `db/` (a crash then leaves no live db; `write_dir` already swaps atomically).
+
+---
+▸ 2026-11-02T00:02:38Z [native-1]
+
+Summary (native-1), commits cfa0c5a, 35204fd, a22c792 on main (base 1569374), not pushed, not shorn.
+
+Shape of the change:
+
+- `main.rs`: optional world-dir argument (a bad argument prints usage and exits 2, a world that fails to load exits 1); `load_world(Option<&Path>)` is the one loader (dir via `World::open_dir`, else the embedded files via `World::from_files`). `WorldMap` and `Solids` are now built in `main()`, and `setup` reads the world from `WorldMap`.
+- `world.rs`: `WorldMap` records `edited` columns in `set_block` (the edited column only, not its neighbours); `edited_columns()` returns clones with `recompute_heights()`; `mark_saved()` clears them.
+- `save.rs` (native only): `save_world(map, dir) -> Result<Option<Saved>>` re-opens the dir with `WorldWriter`, puts only the edited columns, copies `db/` to `db.backup-<UTC>[-n]`, then `write_dir`. No edits means no write and no backup. On error nothing changes and the edits stay pending. `SavePlugin` sets `SaveAvailable` only when a dir was given, handles `SaveRequested` (menu Save), and Ctrl+S sends the same message. The embedded world only logs why it cannot save.
+- README: usage and Save behaviour; menu text no longer says "once saving exists".
+
+Evidence (`CARGO_PROFILE_DEV_DEBUG=0 CARGO_INCREMENTAL=0`, no native release builds):
+
+- `cargo test --workspace`: all pass, viewer 73 tests including 7 new in `save::tests`: save in place and reload shows the edits with fresh heights, other columns equal, backup byte-identical to the old `db/`, other files untouched; no-edit save writes nothing, each save its own backup; failed save keeps edits; Ctrl+S and a menu request save; the embedded world does not.
+- `cargo clippy --workspace --all-targets`: clean (after one `cloned_ref_to_slice_refs` fix).
+- `cargo clippy -p memcraft-viewer --target wasm32-unknown-unknown`: clean.
+- `sh crates/memcraft-viewer/web/build.sh`: builds, dist is 22M wasm + js + index.html (`~/native1-web.log`).
+- `mcpe2java` on a saved test world (the save test's output kept in a temp dir, then removed): `converted "My World": 256 chunks, 89 block entities, 265 entities`, writing `level.dat` and `region`; identical counts to the untouched sample.
+
+Not done / known gaps:
+
+- No GUI run of the native window (no display): the dir argument and Save-in-the-window path are covered by tests, not seen.
+- Lighting stays stale in edited columns; the saved world is untested in real PE.
+- The saved `db/` has no `LOCK` file (the old one did; it stays in the backup). LevelDB recreates it.
+- Backups are never pruned. Save feedback is log-only: UI toast and the browser half belong to mem-5219.
+- `MEMCRAFT_WORLD` still picks the embedded world at build time, unchanged.
