@@ -9,8 +9,9 @@
 //! it and opens the menu), WASD to move, Q/E down/up, Shift to go fast,
 //! scroll to change speed,
 //! F to switch between flying and walking (Space jumps), 1-9 to choose a block,
+//! B to open the block picker (search, click a block for the selected slot),
 //! left click to break the block in the crosshair, right click to use a door,
-//! lever or button, or else to place one.
+//! lever or button, or else to place one, middle click to pick the block.
 
 mod blocks;
 mod buttons;
@@ -27,6 +28,7 @@ mod item_icons;
 mod menu;
 mod mesh;
 mod physics;
+mod picker;
 mod save;
 mod sign_editor;
 mod signs;
@@ -77,7 +79,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin, toast::ToastPlugin))
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin, toast::ToastPlugin, picker::PickerPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)

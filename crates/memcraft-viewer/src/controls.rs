@@ -17,12 +17,13 @@ use mcpe_world::HEIGHT;
 
 use crate::physics::{Body, Solids, EYE_HEIGHT};
 
-/// The mouse buttons, all in one place. Middle is kept for picking a block.
+/// The mouse buttons, all in one place.
 pub const LOCK_BUTTON: MouseButton = MouseButton::Left;
 pub const BREAK_BUTTON: MouseButton = MouseButton::Left;
 pub const PLACE_BUTTON: MouseButton = MouseButton::Right;
+pub const PICK_BUTTON: MouseButton = MouseButton::Middle;
 
-/// Set while a dialog (the sign editor) owns the free pointer and the
+/// Set while a dialog (the sign editor, the block picker) owns the free pointer and the
 /// keyboard: the menu stays down, and a click on the scene does not lock the
 /// pointer. The dialog is the one that locks it again.
 #[derive(Resource, Default)]

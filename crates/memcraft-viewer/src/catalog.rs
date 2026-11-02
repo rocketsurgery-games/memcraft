@@ -9,9 +9,6 @@
 //! furnaces face +z so the front is the icon); choosing a facing at placement
 //! time is up to the caller.
 
-// Nothing uses the catalog yet (the hotbar will).
-#![allow(dead_code)]
-
 use std::sync::LazyLock;
 
 use crate::blocks::{self, Look, Tile};
@@ -26,7 +23,8 @@ pub enum Category {
 }
 
 impl Category {
-    /// In creative-inventory (and table) order.
+    /// In creative-inventory (and table) order. Only the tests need the list.
+    #[cfg(test)]
     pub const ALL: [Category; 5] =
         [Category::Building, Category::Decoration, Category::Plants, Category::Redstone, Category::Misc];
 
@@ -74,6 +72,22 @@ pub fn all() -> &'static [Entry] {
     &ALL
 }
 
+/// The entry for exactly this `(id, data)`, if the catalog lists it.
+pub fn find(id: u8, data: u8) -> Option<&'static Entry> {
+    all().iter().find(|e| (e.id, e.data) == (id, data))
+}
+
+/// The entry that stands for a block found in the world, which may carry state
+/// the catalog does not list: a log lying on its side, a stair facing north,
+/// the top half of a door or slab, wheat that is not fully grown. The exact
+/// block if it is listed; else the same block without its upper data bits
+/// (orientation and half flags sit above the variant), `data & 7` and then
+/// `data & 3`; else the first entry with the same id. `None` for a block
+/// the catalog has no entry for at all (a lit furnace, say).
+pub fn nearest(id: u8, data: u8) -> Option<&'static Entry> {
+    [data, data & 7, data & 3].into_iter().find_map(|d| find(id, d)).or_else(|| all().iter().find(|e| e.id == id))
+}
+
 /// The names of a 16-colour block, in data-value order, e.g. `dyed!("Wool")`.
 macro_rules! dyed {
     ($kind:literal) => {
@@ -115,8 +129,6 @@ impl Builder {
         }
     }
 }
-
-const WOODS: [&str; 6] = ["Oak", "Spruce", "Birch", "Jungle", "Acacia", "Dark Oak"];
 
 fn build() -> Vec<Entry> {
     let mut b = Builder { out: Vec::new(), category: Category::Building };
@@ -377,6 +389,32 @@ mod tests {
         for e in all() {
             assert!(seen.insert((e.id, e.data)), "duplicate block {}:{} ({})", e.id, e.data, e.name);
         }
+    }
+
+    #[test]
+    fn listed_blocks_are_found_exactly() {
+        for e in all() {
+            assert_eq!(find(e.id, e.data), Some(e));
+            assert_eq!(nearest(e.id, e.data), Some(e));
+        }
+    }
+
+    #[test]
+    fn world_blocks_with_extra_state_stand_for_their_catalog_entry() {
+        let name = |id, data| nearest(id, data).map(|e| e.name);
+        // Spruce log lying east-west (data 4 | 1), and with all the orientation bits.
+        assert_eq!(name(17, 5), Some("Spruce Log"));
+        assert_eq!(name(17, 9), Some("Spruce Log"));
+        // A top-half sandstone slab; an upper door half; stairs facing any way.
+        assert_eq!(name(44, 8 | 1), Some("Sandstone Slab"));
+        assert_eq!(name(64, 8), Some("Oak Door"));
+        assert_eq!(name(53, 5), Some("Oak Stairs"));
+        // Decaying birch leaves; young wheat.
+        assert_eq!(name(18, 8 | 2), Some("Birch Leaves"));
+        assert_eq!(name(59, 3), Some("Wheat"));
+        // Air and blocks outside the catalog have no entry.
+        assert_eq!(name(0, 0), None);
+        assert_eq!(name(62, 3), None, "lit furnace");
     }
 
     #[test]

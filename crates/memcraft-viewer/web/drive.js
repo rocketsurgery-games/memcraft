@@ -26,6 +26,17 @@
 // old=id` for the block it broke, and resumes. The zip is then checked with
 // `cargo test -p memcraft-viewer -- --ignored drives_download` (see
 // src/download.rs), which wants the unzipped folder and that line's x,y,z.
+// With $PICKER also set (and $CAM aimed at open air or a flat surface), the
+// drive then presses B (the picker opens: the pointer lock must drop and the
+// menu stay down; `picker-open.png`), types $PICKER as the search
+// (`picker-search.png` shows the filtered grid), hovers the second block in the
+// grid (`picker-hover.png`: its name in a tooltip), clicks it
+// (`picker-picked.png`: the selected hotbar slot now holds it), presses Esc
+// (the picker closes; the pointer stays free), clicks the scene to lock again
+// and right-clicks the crosshair to place the picked block
+// (`picker-placed.png`). Exactly one block edit is expected. A middle click
+// then picks the block under the crosshair into the same slot
+// (`picker-pickblock.png`; the log says which).
 //
 // The menu hangs 200 px down: the buttons are 260x40 with
 // 10 px gaps under a title, so Resume and Controls sit at fixed places in a
@@ -117,6 +128,47 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
     await waitLock(true)
     console.log('locked after resuming from the save menu:', await locked())
   }
+  if (process.env.PICKER) {
+    await page.waitForTimeout(3000)
+    await shot('picker-before.png')
+    await page.keyboard.press('b')
+    await waitLock(false)
+    await page.waitForTimeout(3000)
+    console.log('locked with the picker open (must be null):', await locked())
+    await shot('picker-open.png')
+    await page.keyboard.type(process.env.PICKER, { delay: 100 })
+    await page.waitForTimeout(3000)
+    await shot('picker-search.png')
+    // The second cell of the grid (Orange Wool for "wool"): cells are 38 px
+    // with 4 px gaps, the first at x = 431, y = 141 in a 1280x720 viewport
+    // (see picker-search.png).
+    const CELL = [431 + 42 + 19, 141 + 19]
+    await page.mouse.move(...CELL)
+    await page.waitForTimeout(3000)
+    await shot('picker-hover.png')
+    await page.mouse.click(...CELL, { button: 'left' })
+    await page.waitForTimeout(3000)
+    await shot('picker-picked.png')
+    console.log('picks logged:', logs.filter(l => /\bpicked /.test(l)))
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(3000)
+    console.log('locked after Esc closed the picker (must be null):', await locked())
+    await shot('picker-closed.png')
+    await page.mouse.move(...SCENE)
+    await page.waitForTimeout(2000)
+    await page.mouse.click(...SCENE, { button: 'left' })
+    await waitLock(true)
+    console.log('locked after the next click:', await locked())
+    await page.waitForTimeout(3000)
+    await page.mouse.click(...SCENE, { button: 'right' })
+    await page.waitForTimeout(3000)
+    await shot('picker-placed.png')
+    console.log('block edits logged (the one placement):', logs.filter(l => /\b(broke|placed|toggled) /.test(l)))
+    await page.mouse.click(...SCENE, { button: 'middle' })
+    await page.waitForTimeout(3000)
+    await shot('picker-pickblock.png')
+    console.log('picks logged:', logs.filter(l => /\bpicked /.test(l)))
+  }
   // Turn right, with no button held.
   for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
   await page.waitForTimeout(3000)
@@ -140,7 +192,7 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await page.mouse.click(...RESUME, { button: 'left' })
   await waitLock(true)
   console.log('locked after clicking Resume:', await locked())
-  console.log(`block edits logged (must be ${(process.env.LEVER ? 1 : 0) + (process.env.SAVE ? 1 : 0)}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
+  console.log(`block edits logged (must be ${(process.env.LEVER ? 1 : 0) + (process.env.SAVE ? 1 : 0) + (process.env.PICKER ? 1 : 0)}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
   printLogs()
   await browser.close(); server.close()
 })().catch(e => { console.error(String(e).split('\n')[0]); printLogs(); process.exit(1) })

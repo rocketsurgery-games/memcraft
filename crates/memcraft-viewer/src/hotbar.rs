@@ -31,6 +31,14 @@ impl Hotbar {
     pub fn selected_block(&self) -> Option<Block> {
         self.slots[self.selected]
     }
+
+    /// Puts `block` in the selected slot (the picker and pick-block do this).
+    pub fn set_selected_block(&mut self, block: Block) {
+        // Not through `deref_mut` unless it changes: `refresh_slots` runs on that.
+        if self.slots[self.selected] != Some(block) {
+            self.slots[self.selected] = Some(block);
+        }
+    }
 }
 
 const KEYS: [KeyCode; 9] = [
@@ -87,7 +95,7 @@ fn select_by_key(keys: Res<ButtonInput<KeyCode>>, mut hotbar: ResMut<Hotbar>) {
 /// What to show for a block: its name, and its atlas tile with a tint. Blocks
 /// outside the catalog fall back to their +z face.
 fn describe((id, data): Block) -> (String, u16, Color) {
-    let (name, tile, look) = match catalog::all().iter().find(|e| (e.id, e.data) == (id, data)) {
+    let (name, tile, look) = match catalog::find(id, data) {
         Some(entry) => (entry.name.to_string(), entry.icon(), entry.look()),
         None => {
             let look = blocks::look(id, data);
@@ -99,7 +107,7 @@ fn describe((id, data): Block) -> (String, u16, Color) {
 }
 
 /// The pixel rectangle of an atlas tile.
-fn tile_rect(tile: u16) -> Rect {
+pub fn tile_rect(tile: u16) -> Rect {
     let (col, row) = (u32::from(tile) % atlas::COLS, u32::from(tile) / atlas::COLS);
     let min = Vec2::new((col * atlas::TILE_PX) as f32, (row * atlas::TILE_PX) as f32);
     Rect::from_corners(min, min + Vec2::splat(atlas::TILE_PX as f32))
@@ -189,17 +197,19 @@ fn refresh_slots(
 fn show_name(
     hotbar: Res<Hotbar>,
     time: Res<Time>,
-    mut shown: Local<Option<usize>>,
+    mut shown: Local<Option<(usize, Option<Block>)>>,
     mut timer: Local<Timer>,
     mut label: Single<(&mut Text, &mut TextColor), With<BlockName>>,
 ) {
-    // The first frame only notes the starting selection.
-    if *shown != Some(hotbar.selected) {
+    // The first frame only notes the starting selection. A new block in the
+    // selected slot (picked, or chosen in the picker) is a new selection too.
+    let now = (hotbar.selected, hotbar.selected_block());
+    if *shown != Some(now) {
         if shown.is_some() {
             label.0.0 = hotbar.selected_block().map(|b| describe(b).0).unwrap_or_default();
             *timer = Timer::from_seconds(NAME_SECONDS, TimerMode::Once);
         }
-        *shown = Some(hotbar.selected);
+        *shown = Some(now);
     }
     timer.tick(time.delta());
     let alpha = (timer.remaining_secs() / NAME_FADE).min(1.0);

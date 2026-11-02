@@ -5,7 +5,8 @@
 //! is outlined and marked by a crosshair. [`BREAK_BUTTON`] removes it,
 //! [`PLACE_BUTTON`] uses the block if it reacts to a click (see
 //! [`interact`]) and otherwise puts the hotbar's selected block against the
-//! face that was hit (see [`can_place`]). The buttons live in `controls`.
+//! face that was hit (see [`can_place`]), and [`PICK_BUTTON`] copies the block
+//! into the selected hotbar slot. The buttons live in `controls`.
 //!
 //! Every block is treated as a full cube here, whatever its shape.
 
@@ -13,8 +14,9 @@ use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
 
 use crate::blocks::{self, Shape};
+use crate::catalog;
 use crate::buttons::{press_ticks, PendingReleases, POWERED};
-use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PLACE_BUTTON};
+use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PICK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
 use crate::interact::interact;
 use crate::physics::{Solids, EYE_HEIGHT, HALF_WIDTH, HEIGHT_BLOCKS};
@@ -43,7 +45,7 @@ impl Plugin for TargetingPlugin {
             Update,
             (
                 // Before the click that locks the pointer is handled, so that click only locks.
-                edit_blocks.before(grab_pointer),
+                (edit_blocks, pick_block).before(grab_pointer),
                 // After the camera has moved, so the outline is where the view is.
                 (update_target, show_feedback).chain().after(walk),
             ),
@@ -206,6 +208,27 @@ fn edit_blocks(
         {
             info!("placed {block:?} at {cell}");
         }
+    }
+}
+
+/// Middle click: puts the targeted block in the selected hotbar slot. A block
+/// the catalog does not list as such (a door's upper half, a stair facing
+/// north) stands for its catalog entry, see [`catalog::nearest`]; one it has
+/// no entry for at all (a lit furnace) is not picked.
+fn pick_block(
+    mouse: Res<ButtonInput<MouseButton>>,
+    cursor: Single<&CursorOptions, With<PrimaryWindow>>,
+    target: Res<Target>,
+    map: Res<WorldMap>,
+    mut hotbar: ResMut<Hotbar>,
+) {
+    let Some(hit) = target.0.filter(|_| is_locked(&cursor) && mouse.just_pressed(PICK_BUTTON)) else {
+        return;
+    };
+    let (id, data) = map.block(hit.block.x, hit.block.y, hit.block.z);
+    if let Some(entry) = catalog::nearest(id, data) {
+        hotbar.set_selected_block((entry.id, entry.data));
+        info!("picked {} ({id}:{data}) from {}", entry.name, hit.block);
     }
 }
 
@@ -390,6 +413,63 @@ mod tests {
         assert_eq!(got, hit([48, 120, 40], [-1, 0, 0]));
         let got = cast(Vec3::new(52.5, 120.5, 40.5), Vec3::NEG_X, 6.0, |c| targetable(map.block(c.x, c.y, c.z)));
         assert_eq!(got, hit([48, 120, 40], [1, 0, 0]));
+    }
+
+    /// A locked window, a world, a target and the hotbar, with `pick_block`.
+    fn pick_app(target: Option<Hit>) -> App {
+        let mut app = App::new();
+        app.insert_resource(WorldMap::new(crate::load_world(None).unwrap()))
+            .insert_resource(Target(target))
+            .init_resource::<Hotbar>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .add_systems(Update, pick_block);
+        let mut cursor = CursorOptions::default();
+        crate::controls::set_locked(&mut cursor, true);
+        app.world_mut().spawn((Window::default(), cursor, PrimaryWindow));
+        app
+    }
+
+    fn middle_click(app: &mut App) {
+        app.world_mut().resource_mut::<ButtonInput<MouseButton>>().press(PICK_BUTTON);
+        app.update();
+    }
+
+    #[test]
+    fn middle_click_puts_the_targeted_block_in_the_selected_slot() {
+        let cell = IVec3::new(48, 120, 40);
+        let hit = Some(Hit { block: cell, normal: IVec3::Y });
+        let mut app = pick_app(hit);
+        // A log lying on its side is picked as the plain catalog log.
+        app.world_mut().resource_mut::<WorldMap>().set_block(cell.x, cell.y, cell.z, 17, 9);
+        app.world_mut().resource_mut::<Hotbar>().selected = 3;
+        middle_click(&mut app);
+        let hotbar = app.world().resource::<Hotbar>();
+        assert_eq!(hotbar.selected_block(), Some((17, 1)), "spruce log");
+        assert_eq!(hotbar.slots[0], Some((1, 0)), "the other slots are as they were");
+        assert_eq!(hotbar.selected, 3);
+    }
+
+    #[test]
+    fn picking_needs_a_target_the_catalog_knows_and_a_locked_pointer() {
+        let cell = IVec3::new(48, 120, 40);
+        let hit = Some(Hit { block: cell, normal: IVec3::Y });
+        let before = Hotbar::default();
+        // Nothing in the sights.
+        let mut app = pick_app(None);
+        middle_click(&mut app);
+        assert_eq!(*app.world().resource::<Hotbar>(), before);
+        // A lit furnace has no entry.
+        let mut app = pick_app(hit);
+        app.world_mut().resource_mut::<WorldMap>().set_block(cell.x, cell.y, cell.z, 62, 3);
+        middle_click(&mut app);
+        assert_eq!(*app.world().resource::<Hotbar>(), before);
+        // The pointer is free (a menu or the picker is up).
+        let mut app = pick_app(hit);
+        app.world_mut().resource_mut::<WorldMap>().set_block(cell.x, cell.y, cell.z, 17, 1);
+        let mut cursors = app.world_mut().query::<&mut CursorOptions>();
+        crate::controls::set_locked(&mut cursors.single_mut(app.world_mut()).unwrap(), false);
+        middle_click(&mut app);
+        assert_eq!(*app.world().resource::<Hotbar>(), before);
     }
 
     const STONE: Block = (1, 0);
