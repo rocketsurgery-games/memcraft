@@ -47,13 +47,15 @@ mod key;
 mod writer;
 
 pub use key::{ChunkPos, Dimension};
+/// The NBT tag type of [`Column::entities`] and friends, for code that reads them.
+pub use nbt::Tag;
 pub use writer::{SavedWorld, WorldWriter};
 
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::Path;
 
-use nbt::{Endian, Tag};
+use nbt::Endian;
 
 /// Height of an old Pocket Edition world, in blocks.
 pub const HEIGHT: usize = 128;
