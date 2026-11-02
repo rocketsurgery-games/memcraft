@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 4
 created: '2026-11-01T03:38:53Z'
-updated: '2026-11-02T08:48:31Z'
+updated: '2026-11-02T09:16:22Z'
 parent: mem-f4c5
 depends_on:
 - mem-5d8c
@@ -27,3 +27,9 @@ moved: hairy -> shaving
 ▸ 2026-11-02T08:48:31Z [items-1]
 
 Checkpoint: items.rs (Stack, icon, name, exchange/send), hotbar of stacks, container window clicks + set_stack write-back, item names. Next: run tests, drive stage, clippy, wasm build.
+
+![chest-open](mem-834e/chest-open.png)
+
+![chest-hover](mem-834e/chest-hover.png)
+
+![chest-took](mem-834e/chest-took.png)
