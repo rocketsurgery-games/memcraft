@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 4
 created: '2026-11-01T03:38:52Z'
-updated: '2026-11-02T08:38:09Z'
+updated: '2026-11-02T08:55:01Z'
 parent: mem-f4c5
 ---
 
@@ -25,3 +25,8 @@ moved: hairy -> shaving
 ▸ 2026-11-02T08:38:09Z [mobs-1]
 
 mobs-1 started: new module crates/memcraft-viewer/src/mobs.rs (mobs/minecarts as hitbox boxes + head box, dropped items as cubes), sample world census from entity ids (low byte). Building with CARGO_TARGET_DIR=/home/user/memcraft/target (shared, disk is tight).
+
+---
+▸ 2026-11-02T08:55:01Z [mobs-1]
+
+mobs-1 checkpoint: code done (commit b62b0c3); sample world draws 90 mobs (32 chicken, 14 cow, 13 minecart, 12 ocelot, 11 pig, 6 sheep, skeleton+zombie horse) + 10 dropped items; browser drive screenshot ok. Running workspace tests/clippy/web build.
