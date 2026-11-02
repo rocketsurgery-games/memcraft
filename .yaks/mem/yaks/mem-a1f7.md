@@ -1,11 +1,11 @@
 ---
 id: mem-a1f7
 title: World server for hosted saves
-status: shaving
+status: shorn
 type: task
 priority: 4
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T05:21:14Z'
+updated: '2026-11-02T06:01:38Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -73,3 +73,18 @@ Summary: crates/memcraft-server (axum, tower-http ServeDir) serves web dist + on
 Evidence: cargo test --workspace PASS (server: 7 tests, mcpe-world wire/save tests); cargo clippy --workspace --all-targets clean; RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo clippy -p memcraft-viewer --target wasm32-unknown-unknown clean; sh crates/memcraft-viewer/web/build.sh OK. Drive: memcraft-server --world /tmp/srvworld(copy of sample) --addr 127.0.0.1:8080, then CAM=119.5,67.5,15,180,35 SAVE=1 HOSTED=1 NODE_PATH=~/tools/drive/node_modules node crates/memcraft-viewer/web/drive.js http://127.0.0.1:8080/ /tmp/shots: broke 119,64,11 (id 85), toast 'Saved 1 column to the server…', backup dir created, reloaded page shows the gap (attached hosted-*.png), and DRIVE_WORLD=/tmp/srvworld DRIVE_EDIT=119,64,11 cargo test -p memcraft-viewer -- --ignored drives_download PASS (World::open_dir shows block 0, only that column differs).
 
 Gaps: no auth; last save of a column wins and viewers don't see each other's edits until reload; saved worlds' lighting not recomputed (as native); wasm viewer path (server.rs) only covered by the drive, not unit tests; the drive's HOSTED run saw one column only; debug server binary used (no release build).
+
+---
+▸ 2026-11-02T06:01:38Z [herd-memcraft]
+
+Landed c184b91 on main (server-1's 653a997 squash-merged, fast-forward). Herd re-ran on main: workspace tests (16 suites ok incl. memcraft-server's 7), clippy native+wasm clean, web/build.sh OK; plain drive against static dist shows the api/world probe 404s and the embedded world loads (Pages path unchanged). Hosted drive evidence from server-1 (save to server, reload shows edit, backup dir) not re-run by herd.
+
+---
+▸ 2026-11-02T06:01:38Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
