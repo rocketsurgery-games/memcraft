@@ -5,7 +5,7 @@ status: shaving
 type: feature
 priority: 4
 created: '2026-11-01T03:38:53Z'
-updated: '2026-11-02T09:16:37Z'
+updated: '2026-11-02T09:21:05Z'
 parent: mem-f4c5
 depends_on:
 - mem-5d8c
@@ -53,3 +53,8 @@ Decision: clicks. Container slot: swap with the selected hotbar slot (same item 
 ▸ 2026-11-02T09:16:37Z [items-1]
 
 Decision: write-back goes through containers::set_stack: rewrites only the one slot's entry in Items (Count byte, Damage short, Slot byte, id short), keeps key order, other slots' entries (even ones the reader skips) and, for the same item, its other tags (name, enchants). A container block with no entity (trapped chest) gets a fresh one. Double chest slots carry their own cell+slot number. Known loss: a stack moved to the hotbar forgets its NBT tags.
+
+---
+▸ 2026-11-02T09:21:05Z [items-1]
+
+Summary: hotbar slots are item stacks (new items.rs: Stack, icon, name, exchange/send; item_icons.rs now has ~150 PE names; entities::held_icon uses items::icon). The container window shows the hotbar, names the hovered item, and clicks move stacks (take/swap/merge, shift-click, put, 1-9 select); every change is written via containers::set_stack -> WorldMap::set_block_entity, so save/zip/server pick it up (test: edits_survive_the_world_writer). Evidence: cargo test --workspace ok (173 viewer tests), clippy native --workspace --all-targets and wasm clean, web/build.sh builds, drive CHEST stage (CAM=90.5,77.8,110.5,270,5 CHEST=1, NODE_PATH=~/tools/drive/node_modules node crates/memcraft-viewer/web/drive.js crates/memcraft-viewer/web/dist ~/shots1) takes the eggs into hotbar slot 0, 0 block edits; screenshots attached. Commit 2328c93. Gaps: no split/right-click; tools merge to 64; moved stacks lose NBT tags; items without an icon are invisible in the hotbar; no per-container slot rules (furnace output accepts items).
