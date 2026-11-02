@@ -1,11 +1,11 @@
 ---
 id: mem-f5cf
 title: Map chunk persistence
-status: shaving
+status: shorn
 type: feature
 priority: 3
 created: '2026-10-31T23:21:32Z'
-updated: '2026-11-02T01:15:27Z'
+updated: '2026-11-02T08:31:34Z'
 ---
 
 Initially, let's just focus on a manual save affordance in the menu (I guess we'll need a menu first!). Presumably we'd need some other serving mechanism to even be _able_ to save anything. We can explore that as well, but also preserve an "ephemeral" mode for read-only deployments with no server.
@@ -68,3 +68,18 @@ thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2xo5IBxBD-0Otq811F0oo4eGE3HRbr
 ---
 
 moved: hairy -> shaving
+
+---
+▸ 2026-11-02T08:31:34Z [herd-memcraft]
+
+All children shorn: writer mem-a86b, native save mem-dc6b, browser zip/save feedback mem-5219, world server mem-a1f7. Main 9098f50.
+
+---
+▸ 2026-11-02T08:31:34Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
