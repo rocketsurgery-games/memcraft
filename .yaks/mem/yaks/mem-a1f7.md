@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 4
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T04:37:48Z'
+updated: '2026-11-02T04:40:15Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -37,3 +37,11 @@ Decision: save sends only edited columns, not the whole world. The server re-rea
 Decision: shared save code (backup_db, utc_stamp, 'put columns over a dir with backup') moves from viewer save.rs into mcpe-world; native save and the server both call it. Packing helpers live in mcpe-world too (wire module).
 
 Decision: the page probes and fetches the world in index.html JS before init() (async fetch inside a wasm-bindgen-futures task would be fatal: winit's control-flow exception thrown inside a task stalls the task queue); the viewer reads it from window and POSTs saves from Rust via web-sys fetch.
+
+---
+▸ 2026-11-02T04:40:15Z [server-1]
+kind: checkpoint
+commit: baf056f0ba36fcf4effbeb7367b8a9df4a578e11
+---
+
+checkpoint: mcpe-world has wire (pack/unpack world and columns) + save_columns (backup, moved from viewer); crates/memcraft-server done with 7 passing tests (probe, round trip with backup, bad body, stale viewers, static). Next: viewer wasm side, drive, README.
