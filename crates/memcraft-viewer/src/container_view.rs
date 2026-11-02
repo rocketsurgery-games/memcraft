@@ -1,7 +1,20 @@
 //! The container window: right click on a chest, furnace, dispenser,
 //! dropper, hopper or brewing stand (see `targeting`) opens a panel with the
 //! slots of its block entity (see `containers`), each with the item's icon
-//! and count. It only looks: moving items is not possible.
+//! and count, and the hotbar below them. Hovering a slot names its item.
+//!
+//! Clicks move stacks between the two (see `items` for how stacks merge and
+//! swap; the counts are kept, nothing is split):
+//!
+//! - a click on a container slot takes its stack into the selected hotbar
+//!   slot, swapping with what is there;
+//! - shift and click sends it to the hotbar's first free slot instead;
+//! - a click on a hotbar slot puts its stack into the container's first free
+//!   slot;
+//! - the number keys 1-9 choose the selected hotbar slot, as in the game.
+//!
+//! Every change is written to the container's block entity (see
+//! [`containers::set_stack`]), so it is saved with the world.
 //!
 //! The panel needs the free pointer, so opening it releases the lock, and
 //! [`Modal`] is set while it is up: the menu stays down and a click on the
@@ -13,12 +26,10 @@
 use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
 
-use crate::blocks::Tile;
-use crate::catalog;
-use crate::containers::{self, Contents, Stack};
+use crate::containers::{self, Contents};
 use crate::controls::{grab_pointer, set_locked, Modal};
-use crate::hotbar::tile_rect;
-use crate::item_icons;
+use crate::hotbar::{pressed_slot, tile_rect, Hotbar};
+use crate::items::{self, Stack};
 use crate::world::WorldMap;
 use crate::AtlasImage;
 
@@ -29,12 +40,28 @@ const CLOSE_KEY: KeyCode = KeyCode::KeyE;
 #[derive(Message)]
 pub struct OpenContainer(pub IVec3);
 
-/// The window's root entity, while it is open.
+/// The window's root entity and the container's cell, while it is open.
 #[derive(Resource, Default)]
-struct Open(Option<Entity>);
+struct Open(Option<(Entity, IVec3)>);
 
 #[derive(Component)]
 struct CloseButton;
+
+/// Where a slot of the window is: the container's, or the hotbar's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Place {
+    /// An index into [`Contents::slots`].
+    Container(usize),
+    Hotbar(usize),
+}
+
+/// A slot's button, with the stack it shows.
+#[derive(Component)]
+struct SlotButton(Place, Option<Stack>);
+
+/// The line under the container that names the hovered slot's item.
+#[derive(Component)]
+struct HoverName;
 
 /// A slot is a 40 px box holding a 32 px icon (2x the 16 px tile, so the
 /// pixels stay even), in a 4 px gap.
@@ -45,6 +72,8 @@ const ICON: f32 = 32.0;
 const BACKDROP: Color = Color::srgba(0.0, 0.0, 0.0, 0.6);
 const PANEL: Color = Color::srgba(0.07, 0.07, 0.07, 0.95);
 const SLOT_FILL: Color = Color::srgb(0.22, 0.22, 0.22);
+const SLOT_HOVER: Color = Color::srgb(0.34, 0.34, 0.40);
+const SELECTED: Color = Color::WHITE;
 const BUTTON: Color = Color::srgb(0.30, 0.30, 0.30);
 const BUTTON_HOVER: Color = Color::srgb(0.42, 0.45, 0.62);
 const DIM: Color = Color::srgb(0.6, 0.6, 0.6);
@@ -57,26 +86,13 @@ impl Plugin for ContainerViewPlugin {
             Update,
             // After `grab_pointer`, so the key that closes the window (it
             // locks the pointer again) is not also taken by it as a release.
-            (close, open).chain().after(grab_pointer),
+            (close, open, click_slots, hover_name).chain().after(grab_pointer),
         );
     }
 }
 
-/// The atlas tile and tint that show `stack`: the block's catalog icon, or the
-/// item's icon. `None` for an item without one.
-fn icon(stack: Stack) -> Option<(Tile, Color)> {
-    match u8::try_from(stack.id) {
-        Ok(id @ 1..=255) => {
-            let entry = catalog::nearest(id, u8::try_from(stack.damage).unwrap_or(0))?;
-            let [r, g, b] = entry.look().color;
-            Some((entry.icon(), Color::srgb(r, g, b)))
-        }
-        _ => Some((item_icons::icon(stack.id, stack.damage)?, Color::WHITE)),
-    }
-}
-
 /// Spawns the window for `contents`; returns its root.
-fn spawn_window(commands: &mut Commands, atlas: &AtlasImage, contents: &Contents) -> Entity {
+fn spawn_window(commands: &mut Commands, atlas: &AtlasImage, contents: &Contents, hotbar: &Hotbar) -> Entity {
     let text = |size: f32| (TextFont { font_size: FontSize::Px(size), ..default() }, TextColor(Color::WHITE));
     let extent = |n: u8| f32::from(n) * (SLOT + GAP) - GAP;
     commands
@@ -101,8 +117,16 @@ fn spawn_window(commands: &mut Commands, atlas: &AtlasImage, contents: &Contents
                     panel
                         .spawn(Node { width: px(extent(contents.columns)), height: px(extent(contents.rows)), ..default() })
                         .with_children(|grid| {
-                            for slot in &contents.slots {
-                                spawn_slot(grid, atlas, slot.column, slot.row, slot.stack);
+                            for (i, slot) in contents.slots.iter().enumerate() {
+                                spawn_slot(grid, atlas, Place::Container(i), (slot.column, slot.row), slot.stack, false);
+                            }
+                        });
+                    panel.spawn((Node { height: px(18), ..default() }, Text::new(""), text(16.0), HoverName));
+                    panel
+                        .spawn(Node { width: px(extent(9)), height: px(extent(1)), ..default() })
+                        .with_children(|row| {
+                            for (i, stack) in hotbar.slots.iter().enumerate() {
+                                spawn_slot(row, atlas, Place::Hotbar(i), (i as u8, 0), *stack, i == hotbar.selected);
                             }
                         });
                     panel
@@ -119,9 +143,10 @@ fn spawn_window(commands: &mut Commands, atlas: &AtlasImage, contents: &Contents
         .id()
 }
 
-/// One slot of the grid: its box, the item's icon (or its id, for an item with
-/// none) and the count when it is more than one.
-fn spawn_slot(grid: &mut ChildSpawnerCommands, atlas: &AtlasImage, column: u8, row: u8, stack: Option<Stack>) {
+/// One slot of the grid, a button: its box (with a white border if
+/// `selected`), the item's icon (or its id, for an item with none) and the
+/// count when it is more than one.
+fn spawn_slot(grid: &mut ChildSpawnerCommands, atlas: &AtlasImage, place: Place, (column, row): (u8, u8), stack: Option<Stack>, selected: bool) {
     let corner = |text: String, size: f32| {
         (
             Node { position_type: PositionType::Absolute, right: px(2), bottom: px(0), ..default() },
@@ -131,7 +156,11 @@ fn spawn_slot(grid: &mut ChildSpawnerCommands, atlas: &AtlasImage, column: u8, r
         )
     };
     let mut slot = grid.spawn((
+        Button,
+        SlotButton(place, stack),
+        BorderColor::all(if selected { SELECTED } else { Color::NONE }),
         Node {
+            border: UiRect::all(px(2)),
             position_type: PositionType::Absolute,
             left: px(f32::from(column) * (SLOT + GAP)),
             top: px(f32::from(row) * (SLOT + GAP)),
@@ -147,9 +176,9 @@ fn spawn_slot(grid: &mut ChildSpawnerCommands, atlas: &AtlasImage, column: u8, r
         return;
     };
     slot.with_children(|slot| {
-        match icon(stack) {
-            Some((tile, tint)) => {
-                let mut image = ImageNode::new(atlas.0.clone()).with_color(tint);
+        match items::icon(stack) {
+            Some((tile, [r, g, b])) => {
+                let mut image = ImageNode::new(atlas.0.clone()).with_color(Color::srgb(r, g, b));
                 image.rect = Some(tile_rect(tile));
                 slot.spawn((Node { width: px(ICON), height: px(ICON), ..default() }, image));
             }
@@ -164,10 +193,12 @@ fn spawn_slot(grid: &mut ChildSpawnerCommands, atlas: &AtlasImage, column: u8, r
 }
 
 /// Opens the window on a click on a container, freeing the pointer for it.
+#[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or message it uses
 fn open(
     mut clicks: MessageReader<OpenContainer>,
     mut commands: Commands,
     map: Res<WorldMap>,
+    hotbar: Res<Hotbar>,
     atlas: Res<AtlasImage>,
     mut window: ResMut<Open>,
     mut modal: ResMut<Modal>,
@@ -179,10 +210,10 @@ fn open(
     let Some(contents) = containers::contents(&map, cell) else {
         return;
     };
-    if let Some(old) = window.0.take() {
+    if let Some((old, _)) = window.0.take() {
         commands.entity(old).despawn();
     }
-    window.0 = Some(spawn_window(&mut commands, &atlas, &contents));
+    window.0 = Some((spawn_window(&mut commands, &atlas, &contents, &hotbar), cell));
     modal.0 = true;
     set_locked(&mut cursor, false);
 }
@@ -197,7 +228,7 @@ fn close(
     mut modal: ResMut<Modal>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
-    let Some(root) = window.0 else {
+    let Some((root, _)) = window.0 else {
         return;
     };
     let mut lock_again = keys.just_pressed(CLOSE_KEY);
@@ -213,37 +244,85 @@ fn close(
     }
 }
 
+/// A click on `place` in the window of the container whose slots are
+/// `contents`, with the hotbar's `slots` and its `selected` one: moves the
+/// stacks as the module doc says and writes the container's changes to the
+/// world. Returns whether anything moved.
+fn move_stack(map: &mut WorldMap, contents: &Contents, slots: &mut [Option<Stack>; 9], selected: usize, place: Place, shift: bool) -> bool {
+    let mut stacks: Vec<Option<Stack>> = contents.slots.iter().map(|s| s.stack).collect();
+    let hotbar = *slots;
+    match place {
+        Place::Container(i) if shift => items::send(&mut stacks[i], slots),
+        Place::Container(i) => items::exchange(&mut stacks[i], &mut slots[selected]),
+        Place::Hotbar(i) => items::send(&mut slots[i], &mut stacks),
+    }
+    let mut moved = *slots != hotbar;
+    for (slot, stack) in contents.slots.iter().zip(stacks) {
+        if slot.stack != stack && containers::set_stack(map, slot.cell, slot.number, stack) {
+            info!("moved: slot {} of the container at {} now holds {:?}", slot.number, slot.cell, stack);
+            moved = true;
+        }
+    }
+    moved
+}
+
+/// Clicks on the slots and the number keys. Whatever changed, the window is
+/// drawn again.
+#[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or query it uses
+fn click_slots(
+    slots: Query<(&Interaction, &SlotButton), Changed<Interaction>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    atlas: Res<AtlasImage>,
+    mut window: ResMut<Open>,
+    mut map: ResMut<WorldMap>,
+    mut hotbar: ResMut<Hotbar>,
+) {
+    let Some((root, cell)) = window.0 else {
+        return;
+    };
+    let mut changed = false;
+    if let Some(slot) = pressed_slot(&keys).filter(|&slot| slot != hotbar.selected) {
+        hotbar.selected = slot;
+        changed = true;
+    }
+    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+    if let Some((_, &SlotButton(place, _))) = slots.iter().find(|(interaction, _)| **interaction == Interaction::Pressed)
+        && let Some(contents) = containers::contents(&map, cell)
+    {
+        let mut moved = hotbar.slots;
+        if move_stack(&mut map, &contents, &mut moved, hotbar.selected, place, shift) {
+            // Not through `deref_mut` unless it changes, see `Hotbar`.
+            if moved != hotbar.slots {
+                hotbar.slots = moved;
+            }
+            changed = true;
+        }
+    }
+    if changed && let Some(contents) = containers::contents(&map, cell) {
+        commands.entity(root).despawn();
+        window.0 = Some((spawn_window(&mut commands, &atlas, &contents, &hotbar), cell));
+    }
+}
+
+/// Names the hovered slot's item under the container.
+fn hover_name(slots: Query<(&Interaction, &SlotButton)>, mut buttons: Query<(&Interaction, &mut BackgroundColor), With<SlotButton>>, mut label: Query<&mut Text, With<HoverName>>) {
+    let Ok(mut label) = label.single_mut() else {
+        return;
+    };
+    let hovered = slots.iter().find(|(interaction, _)| **interaction != Interaction::None);
+    let text = hovered.and_then(|(_, SlotButton(_, stack))| *stack).map(items::name).unwrap_or_default();
+    label.set_if_neq(Text::new(text));
+    for (interaction, mut background) in &mut buttons {
+        background.set_if_neq(BackgroundColor(if *interaction == Interaction::None { SLOT_FILL } else { SLOT_HOVER }));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::controls::grab_pointer;
-
-    fn stack(id: i16, damage: i16) -> Stack {
-        Stack { id, damage, count: 1 }
-    }
-
-    #[test]
-    fn blocks_show_their_catalog_icon_and_items_theirs() {
-        let (stone, tint) = icon(stack(1, 0)).unwrap();
-        assert_eq!(Some(stone), catalog::find(1, 0).map(|e| e.icon()));
-        assert_eq!(tint, Color::srgb(catalog::find(1, 0).unwrap().look().color[0], catalog::find(1, 0).unwrap().look().color[1], catalog::find(1, 0).unwrap().look().color[2]));
-        // A block outside the catalog's exact entries stands for its nearest one: carpet, damage 14.
-        assert!(icon(stack(171, 14)).is_some());
-        // An item (id 265 is an iron ingot) and a dye by its damage.
-        assert_eq!(icon(stack(265, 0)), Some((item_icons::icon(265, 0).unwrap(), Color::WHITE)));
-        assert_ne!(icon(stack(351, 1)), icon(stack(351, 2)));
-    }
-
-    #[test]
-    fn a_stack_without_an_icon_has_none_to_fall_back_from() {
-        // Not an item the pack draws, nor a block the viewer places, nor an id in range.
-        assert_eq!(icon(stack(30000, 0)), None);
-        assert_eq!(icon(stack(342, 0)), None);
-        assert_eq!(icon(stack(-5, 0)), None);
-        assert_eq!(icon(stack(0, 0)), None);
-        // Block 0 is air; the data of a block is a byte.
-        assert_eq!(icon(stack(1, 300)), icon(stack(1, 0)));
-    }
+    use mcpe_world::Tag;
 
     /// A locked window, the world, and the container window's plugin.
     fn app() -> App {
@@ -251,6 +330,7 @@ mod tests {
         app.insert_resource(WorldMap::new(crate::load_world(None).unwrap()))
             .insert_resource(AtlasImage(Handle::default()))
             .init_resource::<Modal>()
+            .init_resource::<Hotbar>()
             .init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<ButtonInput<KeyCode>>()
             .add_plugins(ContainerViewPlugin)
@@ -284,7 +364,7 @@ mod tests {
         app.update();
         assert!(!locked(&mut app), "the pointer is free for the window");
         assert!(app.world().resource::<Modal>().0);
-        let root = app.world().resource::<Open>().0.expect("the window is open");
+        let (root, _) = app.world().resource::<Open>().0.expect("the window is open");
         assert!(app.world().get_entity(root).is_ok());
         // Eleven stacks, 27 slots, and a close button are somewhere under the root.
         let nodes = app.world_mut().query::<&Node>().iter(app.world()).count();
@@ -319,10 +399,10 @@ mod tests {
         let mut app = app();
         app.world_mut().write_message(OpenContainer(CHEST));
         app.update();
-        let first = app.world().resource::<Open>().0.unwrap();
+        let (first, _) = app.world().resource::<Open>().0.unwrap();
         app.world_mut().write_message(OpenContainer(CHEST));
         app.update();
-        let second = app.world().resource::<Open>().0.unwrap();
+        let (second, _) = app.world().resource::<Open>().0.unwrap();
         assert!(app.world().get_entity(first).is_err());
         assert!(app.world().get_entity(second).is_ok());
 
@@ -331,5 +411,107 @@ mod tests {
         app.update();
         assert!(locked(&mut app), "air is no container");
         assert!(app.world().resource::<Open>().0.is_none());
+    }
+
+    /// The chest's window slot at `(column, row)` as a place.
+    fn at(app: &App, column: u8, row: u8) -> Place {
+        let contents = containers::contents(app.world().resource::<WorldMap>(), CHEST).unwrap();
+        Place::Container(contents.slots.iter().position(|s| (s.column, s.row) == (column, row)).unwrap())
+    }
+
+    /// Presses the button of `place` in the open window, for one update.
+    fn press(app: &mut App, place: Place) {
+        let mut buttons = app.world_mut().query::<(&SlotButton, &mut Interaction)>();
+        let (_, mut interaction) = buttons.iter_mut(app.world_mut()).find(|(b, _)| b.0 == place).expect("a slot button");
+        *interaction = Interaction::Pressed;
+        app.update();
+    }
+
+    fn chest(app: &App) -> Vec<(u8, u8, i16, u8)> {
+        let contents = containers::contents(app.world().resource::<WorldMap>(), CHEST).unwrap();
+        contents.slots.iter().filter_map(|s| s.stack.map(|k| (s.column, s.row, k.id, k.count))).collect()
+    }
+
+    fn hotbar(app: &App) -> [Option<Stack>; 9] {
+        app.world().resource::<Hotbar>().slots
+    }
+
+    fn open_chest() -> App {
+        let mut app = app();
+        app.world_mut().write_message(OpenContainer(CHEST));
+        app.update();
+        app
+    }
+
+    #[test]
+    fn a_click_on_a_container_slot_takes_its_stack_into_the_selected_slot_and_swaps() {
+        let mut app = open_chest();
+        let before = app.world().resource::<Open>().0.unwrap().0;
+        // The egg stack (344, four of them) at (0, 0); the selected slot 0 holds stone.
+        let place = at(&app, 0, 0);
+        press(&mut app, place);
+        assert_eq!(hotbar(&app)[0], Some(Stack::new(344, 0, 4)));
+        assert!(chest(&app).contains(&(0, 0, 1, 1)), "the stone is in the chest now");
+        assert!(!chest(&app).contains(&(0, 0, 344, 4)));
+        let (after, _) = app.world().resource::<Open>().0.unwrap();
+        assert!(app.world().get_entity(before).is_err() && app.world().get_entity(after).is_ok(), "the window is drawn again");
+        assert_eq!(app.world().resource::<WorldMap>().edited_columns().len(), 1, "the chest's column is edited");
+        // No block was edited, only the block entity.
+        assert_eq!(app.world().resource::<Hotbar>().selected_block(), None, "an egg places nothing");
+    }
+
+    #[test]
+    fn number_keys_choose_the_slot_a_take_goes_to() {
+        let mut app = open_chest();
+        tap(&mut app, KeyCode::Digit4);
+        assert_eq!(app.world().resource::<Hotbar>().selected, 3);
+        let place = at(&app, 0, 0);
+        press(&mut app, place);
+        assert_eq!(hotbar(&app)[3], Some(Stack::new(344, 0, 4)));
+        assert_eq!(hotbar(&app)[0], Some(Stack::new(1, 0, 1)), "the others are as they were");
+        // Choosing it again changes nothing and draws nothing new.
+        let (root, _) = app.world().resource::<Open>().0.unwrap();
+        tap(&mut app, KeyCode::Digit4);
+        assert_eq!(app.world().resource::<Open>().0.unwrap().0, root);
+    }
+
+    #[test]
+    fn shift_click_goes_to_the_first_free_slot_and_a_hotbar_click_puts_into_the_chest() {
+        let mut app = open_chest();
+        // The hotbar is full: nothing happens.
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::ShiftLeft);
+        let lever = at(&app, 3, 0);
+        press(&mut app, lever);
+        assert_eq!(hotbar(&app), Hotbar::default().slots);
+        assert!(chest(&app).contains(&(3, 0, 69, 64)));
+        // With a free slot, it goes there and the chest's slot empties.
+        app.world_mut().resource_mut::<Hotbar>().slots[4] = None;
+        press(&mut app, lever);
+        assert_eq!(hotbar(&app)[4], Some(Stack::new(69, 0, 64)));
+        assert!(!chest(&app).iter().any(|&(c, r, ..)| (c, r) == (3, 0)));
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().release(KeyCode::ShiftLeft);
+
+        // A click on the hotbar slot puts the stack into the chest: onto the
+        // other lever stack (2 of 69 at (3, 1)) first, as far as it fits, then on.
+        press(&mut app, Place::Hotbar(4));
+        assert_eq!(hotbar(&app)[4], None);
+        let chest = chest(&app);
+        assert!(chest.contains(&(3, 1, 69, 64)), "{chest:?}");
+        assert!(chest.contains(&(3, 0, 69, 2)), "62 filled, 2 in the first free slot: {chest:?}");
+    }
+
+    #[test]
+    fn what_was_moved_is_in_the_world_when_it_is_saved() {
+        let mut app = open_chest();
+        let place = at(&app, 5, 0);
+        press(&mut app, place);
+        let map = app.world().resource::<WorldMap>();
+        let be = map.block_entity(CHEST).unwrap();
+        let items = be.get("Items").and_then(Tag::as_list).unwrap();
+        // The chest's slot 5 now holds the stone, written as the game does.
+        let slot5 = items.iter().find(|i| i.get("Slot").and_then(Tag::as_i64) == Some(5)).unwrap();
+        assert_eq!(slot5.get("id"), Some(&Tag::Short(1)));
+        assert_eq!(slot5.get("Count"), Some(&Tag::Byte(1)));
+        assert_eq!(slot5.get("Damage"), Some(&Tag::Short(0)));
     }
 }

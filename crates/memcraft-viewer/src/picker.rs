@@ -532,8 +532,8 @@ mod tests {
         type_str(&mut app, "diamond");
         click_cell(&mut app, "Block of Diamond");
         let hotbar = app.world().resource::<Hotbar>();
-        assert_eq!(hotbar.slots[4], Some((57, 0)));
-        assert_eq!(hotbar.slots[3], Some((5, 0)), "neighbours are as they were");
+        assert_eq!(hotbar.slots[4], Some(crate::items::Stack::new(57, 0, 1)));
+        assert_eq!(hotbar.slots[3], Some(crate::items::Stack::new(5, 0, 1)), "neighbours are as they were");
         assert_eq!(hotbar.selected, 4);
         assert!(app.world().resource::<Picker>().open, "the picker stays open for the next pick");
     }

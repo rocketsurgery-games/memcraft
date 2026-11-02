@@ -59,9 +59,12 @@
 // lock must drop and the menu stay down; `chest-before.png`, `chest-open.png`).
 // E closes it and the pointer locks again (`chest-closed.png`); a second right
 // click and Esc close it leaving the pointer free (`chest-esc.png`: the menu),
-// and a click on the scene locks again. The stage edits no block, and neither
-// does a click that locks the pointer (see `WorldMouse` in src/controls.rs),
-// so the final count is 0. The sample world's
+// and a click on the scene locks again. Before E, the stage hovers the first
+// slot (`chest-hover.png`: the item's name) and clicks it: the stack goes
+// into the selected hotbar slot and the stone from there into the chest
+// (`chest-took.png`; the log says `moved: slot 0 ...`). Moving items edits the
+// chest's block entity, not a block, and neither does a click that locks the
+// pointer (see `WorldMouse` in src/controls.rs), so the final count is 0. The sample world's
 // chest `CAM=90.5,77.8,110.5,270,5` looks at holds eleven stacks (the camera is
 // checked by a test in src/targeting.rs).
 //
@@ -286,6 +289,20 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
     await page.waitForTimeout(3000)
     console.log('locked with the chest open (must be null):', await locked())
     await shot('chest-open.png')
+    // Take the first stack (four eggs, at 464,262 in a 1280x720 viewport, see
+    // chest-open.png) into the selected hotbar slot, which holds stone and
+    // is at 464,428 under the window: the stone goes into the chest.
+    const SLOT0 = [464, 262]
+    await page.mouse.move(...SLOT0)
+    await page.waitForTimeout(3000)
+    await shot('chest-hover.png') // the item's name under the slots
+    mark('click: take the first stack')
+    await page.mouse.click(...SLOT0, { button: 'left' })
+    const took = await waitLog(/moved: slot 0 of the container at/, 30000)
+    console.log('moved logged:', logs.filter(l => /\bmoved: /.test(l)).map(l => l.slice(0, 200)))
+    if (!took) throw new Error('the click moved nothing')
+    await page.waitForTimeout(3000)
+    await shot('chest-took.png')
     mark('E')
     await page.keyboard.press('e')
     await waitLock(true)

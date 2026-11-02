@@ -11,6 +11,7 @@ use bevy::prelude::*;
 use mcpe_world::Tag;
 
 use crate::hotbar::Block;
+use crate::items::Stack;
 use crate::world::WorldMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,20 +39,15 @@ pub fn kind((id, _): Block) -> Option<Kind> {
     })
 }
 
-/// A stack of items: Pocket Edition item `id` (a block's id below 256), its
-/// damage or variant, and how many.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Stack {
-    pub id: i16,
-    pub damage: i16,
-    pub count: u8,
-}
-
-/// One slot of the window, at a cell of its grid.
+/// One slot of the window, at a cell of its grid, and where its stack is
+/// kept: slot number `number` of the block entity at `cell` (a double chest's
+/// slots are in two block entities).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Slot {
     pub column: u8,
     pub row: u8,
+    pub cell: IVec3,
+    pub number: u8,
     pub stack: Option<Stack>,
 }
 
@@ -96,13 +92,80 @@ fn stacks(be: Option<&Tag>) -> Vec<(usize, Stack)> {
     let items = be.and_then(|be| be.get("Items")).and_then(Tag::as_list).unwrap_or_default();
     items
         .iter()
-        .filter_map(|item| {
-            let number = |k: &str| item.get(k).and_then(Tag::as_i64);
-            let count = u8::try_from(number("Count")?).ok().filter(|&c| c > 0)?;
-            let stack = Stack { id: i16::try_from(number("id")?).ok()?, damage: number("Damage").and_then(|d| i16::try_from(d).ok()).unwrap_or(0), count };
-            Some((usize::try_from(number("Slot")?).ok()?, stack))
-        })
+        .filter_map(|item| Some((usize::try_from(item.get("Slot")?.as_i64()?).ok()?, Stack::from_item(item)?)))
         .collect()
+}
+
+/// The name a container's block entity has in the world's files.
+fn entity_id(kind: Kind) -> &'static str {
+    match kind {
+        Kind::Chest => "Chest",
+        Kind::Furnace => "Furnace",
+        Kind::Dispenser => "Dispenser",
+        Kind::Dropper => "Dropper",
+        Kind::Hopper => "Hopper",
+        Kind::BrewingStand => "BrewingStand",
+    }
+}
+
+/// Puts `stack` (or nothing) in slot `number` of the container at `cell`, by
+/// writing the block entity's `Items` back with [`WorldMap::set_block_entity`],
+/// so that saving and downloading carry it. Each item is a compound of `Count`
+/// (byte), `Damage` (short), `Slot` (byte) and `id` (short), as the game
+/// writes them. Everything else the entity has stays as it was, and so do
+/// the other slots' items, including any this module did not understand; the
+/// slot's own item keeps its other tags (a name, enchantments) while it is the
+/// same item. A container without a block entity gets one. Returns false for
+/// a cell that is no container or is outside the world.
+pub fn set_stack(map: &mut WorldMap, cell: IVec3, number: u8, stack: Option<Stack>) -> bool {
+    let Some(kind) = kind(map.block(cell.x, cell.y, cell.z)) else {
+        return false;
+    };
+    let mut entries = match map.block_entity(cell) {
+        Some(Tag::Compound(entries)) => entries.clone(),
+        _ => [("id", Tag::String(entity_id(kind).into())), ("x", Tag::Int(cell.x)), ("y", Tag::Int(cell.y)), ("z", Tag::Int(cell.z))]
+            .map(|(k, v)| (k.to_owned(), v))
+            .into(),
+    };
+    let at = entries.iter().position(|(k, _)| k == "Items");
+    let mut items = match at {
+        Some(i) => match entries.remove(i).1 {
+            Tag::List(_, items) => items,
+            _ => Vec::new(),
+        },
+        None => Vec::new(),
+    };
+    let slot_of = |item: &Tag| item.get("Slot").and_then(Tag::as_i64);
+    let old = items.iter().position(|item| slot_of(item) == Some(i64::from(number)));
+    match (stack, old) {
+        (None, Some(i)) => {
+            items.remove(i);
+        }
+        (Some(stack), Some(i)) => {
+            let same = Stack::from_item(&items[i]).is_some_and(|old| old.same_item(&stack));
+            if same {
+                let Tag::Compound(fields) = &mut items[i] else { unreachable!("it has a slot") };
+                fields.retain(|(k, _)| k != "Count");
+                fields.push(("Count".into(), Tag::Byte(stack.count as i8)));
+            } else {
+                items[i] = item(number, stack);
+            }
+        }
+        (Some(stack), None) => items.push(item(number, stack)),
+        (None, None) => {}
+    }
+    entries.insert(at.unwrap_or(entries.len()), ("Items".to_owned(), Tag::List(10, items)));
+    map.set_block_entity(cell, Tag::Compound(entries))
+}
+
+/// The compound the game keeps an item stack in.
+fn item(number: u8, stack: Stack) -> Tag {
+    Tag::Compound(vec![
+        ("Count".into(), Tag::Byte(stack.count as i8)),
+        ("Damage".into(), Tag::Short(stack.damage)),
+        ("Slot".into(), Tag::Byte(number as i8)),
+        ("id".into(), Tag::Short(stack.id)),
+    ])
 }
 
 /// The cell of the other half of the double chest at `cell`, if there is one.
@@ -146,11 +209,11 @@ pub fn contents(map: &WorldMap, cell: IVec3) -> Option<Contents> {
         title = custom.to_string();
     }
     let mut slots = Vec::new();
-    for (half, (_, be)) in halves.iter().enumerate() {
+    for (half, (cell, be)) in halves.iter().enumerate() {
         let stacks = stacks(*be);
         for (n, &(column, row)) in places.iter().enumerate() {
             let stack = stacks.iter().find(|&&(slot, _)| slot == n).map(|&(_, s)| s);
-            slots.push(Slot { column, row: row + half as u8 * rows, stack });
+            slots.push(Slot { column, row: row + half as u8 * rows, cell: *cell, number: n as u8, stack });
         }
     }
     Some(Contents { title, columns, rows: rows * halves.len() as u8, slots })
@@ -352,6 +415,117 @@ mod tests {
         let map = world_with(&[(AT, (54, 3), Some(be)), (AT + IVec3::X, (1, 0), None)]);
         let c = contents(&map, AT).unwrap();
         assert_eq!((c.title.as_str(), c.rows, stacks_of(&c)), ("Chest", 3, vec![((0, 0), (1, 0, 1))]));
+    }
+
+    /// The sample world with `map`'s edits saved over it, as the zip download
+    /// and the world server write them, and loaded again.
+    fn saved_and_reloaded(map: &WorldMap) -> WorldMap {
+        let mut writer = crate::embedded_writer().unwrap();
+        writer.put_columns(&map.edited_columns()).unwrap();
+        let saved = writer.finish().unwrap();
+        WorldMap::new(mcpe_world::World::from_files(&saved.level_dat, saved.db_files).unwrap())
+    }
+
+    const CHEST: IVec3 = IVec3::new(93, 77, 110);
+
+    #[test]
+    fn set_stack_edits_one_slot_and_leaves_the_rest_of_the_entity() {
+        let mut map = WorldMap::new(crate::load_world(None).unwrap());
+        let before = map.block_entity(CHEST).unwrap().clone();
+        assert!(map.take_edited_cells().is_empty());
+        // Replace the egg in slot 0, add one in empty slot 10, empty slot 1 (a leather).
+        assert!(set_stack(&mut map, CHEST, 0, Some(Stack::new(265, 0, 7))));
+        assert!(set_stack(&mut map, CHEST, 10, Some(Stack::new(351, 4, 3))));
+        assert!(set_stack(&mut map, CHEST, 1, None));
+        assert_eq!(map.take_edited_cells(), [CHEST; 3]);
+        let c = contents(&map, CHEST).unwrap();
+        let stacks = stacks_of(&c);
+        assert_eq!(stacks[0], ((0, 0), (265, 0, 7)));
+        assert!(!stacks.iter().any(|&(at, _)| at == (1, 0)), "slot 1 is empty");
+        assert!(stacks.contains(&((1, 1), (351, 4, 3))));
+        assert_eq!(stacks.len(), 11, "one replaced, one added, one gone");
+        // The game's own shape: Count a byte, Damage a short, Slot a byte, id a short.
+        let added = map.block_entity(CHEST).unwrap().get("Items").unwrap().as_list().unwrap().iter().find(|i| i.get("Slot").and_then(Tag::as_i64) == Some(10)).unwrap();
+        assert_eq!(added, &item(10, 351, 4, 3));
+        // Nothing else of the entity changed, and the key order is the same.
+        let (Tag::Compound(old), Tag::Compound(new)) = (&before, map.block_entity(CHEST).unwrap()) else { panic!() };
+        assert_eq!(old.iter().map(|(k, _)| k).collect::<Vec<_>>(), new.iter().map(|(k, _)| k).collect::<Vec<_>>());
+        for (k, v) in old.iter().filter(|(k, _)| k != "Items") {
+            assert_eq!(Some(v), map.block_entity(CHEST).unwrap().get(k), "{k}");
+        }
+    }
+
+    #[test]
+    fn the_same_item_keeps_its_other_tags_and_unknown_entries_stay() {
+        let named = Tag::Compound(vec![
+            ("Count".into(), Tag::Byte(2)),
+            ("Damage".into(), Tag::Short(0)),
+            ("Slot".into(), Tag::Byte(0)),
+            ("id".into(), Tag::Short(276)),
+            ("tag".into(), Tag::Compound(vec![("display".into(), Tag::Compound(vec![("Name".into(), Tag::String("Sting".into()))]))])),
+        ]);
+        let odd = item(5, 1, 0, 0);
+        let mut map = world_with(&[(AT, (54, 3), Some(entity("Chest", AT, vec![named.clone(), odd.clone()], vec![])))]);
+        // More of the same item: only the count changes.
+        assert!(set_stack(&mut map, AT, 0, Some(Stack::new(276, 0, 5))));
+        let items = map.block_entity(AT).unwrap().get("Items").unwrap().as_list().unwrap();
+        assert_eq!((items[0].get("Count"), items[0].get("tag")), (Some(&Tag::Byte(5)), named.get("tag")));
+        // Another item in that slot replaces it whole; an entry that was no stack stays.
+        assert!(set_stack(&mut map, AT, 0, Some(Stack::new(1, 0, 1))));
+        let items = map.block_entity(AT).unwrap().get("Items").unwrap().as_list().unwrap();
+        assert_eq!(items, [item(0, 1, 0, 1), odd]);
+    }
+
+    #[test]
+    fn a_container_without_an_entity_gets_one_and_others_are_refused() {
+        let mut map = world_with(&[(AT, (146, 3), None), (AT + IVec3::X, (1, 0), None)]);
+        assert!(map.block_entity(AT).is_none());
+        assert!(set_stack(&mut map, AT, 4, Some(Stack::new(1, 0, 9))));
+        let be = map.block_entity(AT).unwrap();
+        assert_eq!(be.get("id").and_then(Tag::as_str), Some("Chest"));
+        assert_eq!(["x", "y", "z"].map(|k| be.get(k).and_then(Tag::as_i64).unwrap()), [i64::from(AT.x), i64::from(AT.y), i64::from(AT.z)]);
+        assert_eq!(stacks_of(&contents(&map, AT).unwrap()), [((4, 0), (1, 0, 9))]);
+        // Not a container, and not in the world.
+        assert!(!set_stack(&mut map, AT + IVec3::X, 0, Some(Stack::new(1, 0, 1))));
+        assert!(!set_stack(&mut map, AT + IVec3::Y * 500, 0, None));
+        assert!(map.block_entity(AT + IVec3::X).is_none());
+    }
+
+    #[test]
+    fn each_half_of_a_double_chest_is_written_to_its_own_entity() {
+        let (west, east) = (AT, AT + IVec3::X);
+        let mut map = world_with(&[
+            (west, (54, 3), Some(entity("Chest", west, vec![], vec![("pairx", Tag::Int(east.x)), ("pairz", Tag::Int(east.z))]))),
+            (east, (54, 3), Some(entity("Chest", east, vec![], vec![("pairx", Tag::Int(west.x)), ("pairz", Tag::Int(west.z))]))),
+        ]);
+        let c = contents(&map, east).unwrap();
+        // Window slot 30 is the second half's slot 3.
+        let slot = &c.slots[30];
+        assert_eq!((slot.cell, slot.number), (east, 3));
+        assert!(set_stack(&mut map, slot.cell, slot.number, Some(Stack::new(5, 0, 2))));
+        assert_eq!(stacks_of(&contents(&map, west).unwrap()), [((3, 3), (5, 0, 2))]);
+        assert_eq!(map.block_entity(west).unwrap().get("Items").unwrap().as_list().unwrap().len(), 0);
+        assert_eq!(map.block_entity(east).unwrap().get("Items").unwrap().as_list().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn edits_survive_the_world_writer() {
+        let mut map = WorldMap::new(crate::load_world(None).unwrap());
+        assert!(set_stack(&mut map, CHEST, 0, Some(Stack::new(265, 0, 7))));
+        assert!(set_stack(&mut map, CHEST, 3, None));
+        assert!(set_stack(&mut map, CHEST, 26, Some(Stack::new(351, 1, 64))));
+        let expected = contents(&map, CHEST).unwrap();
+        // Only the chest's column is edited, so only it is written.
+        assert_eq!(map.edited_columns().len(), 1);
+        let reloaded = saved_and_reloaded(&map);
+        assert_eq!(contents(&reloaded, CHEST).unwrap(), expected);
+        assert_eq!(stacks_of(&expected)[0], ((0, 0), (265, 0, 7)));
+        assert_eq!(stacks_of(&expected).last(), Some(&((8, 2), (351, 1, 64))));
+        // The rest of the world's containers read as before.
+        let original = WorldMap::new(crate::load_world(None).unwrap());
+        for (cell, _) in world_containers(&original).into_iter().filter(|&(c, _)| c != CHEST) {
+            assert_eq!(contents(&reloaded, cell), contents(&original, cell), "{cell}");
+        }
     }
 
     /// Lists the sample world's containers with their contents, to find one

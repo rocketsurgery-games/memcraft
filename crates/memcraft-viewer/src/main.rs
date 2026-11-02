@@ -28,6 +28,7 @@ mod font;
 mod hotbar;
 mod interact;
 mod item_icons;
+mod items;
 mod menu;
 mod mesh;
 mod mobs;

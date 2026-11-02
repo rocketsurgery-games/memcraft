@@ -486,7 +486,7 @@ mod tests {
         middle_click(&mut app);
         let hotbar = app.world().resource::<Hotbar>();
         assert_eq!(hotbar.selected_block(), Some((17, 1)), "spruce log");
-        assert_eq!(hotbar.slots[0], Some((1, 0)), "the other slots are as they were");
+        assert_eq!(hotbar.slots[0], Some(crate::items::Stack::new(1, 0, 1)), "the other slots are as they were");
         assert_eq!(hotbar.selected, 3);
     }
 

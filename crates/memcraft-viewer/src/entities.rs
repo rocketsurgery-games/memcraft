@@ -15,8 +15,8 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use mcpe_world::{Tag, World as PeWorld};
 
-use crate::blocks::{self, atlas::tile as t, Shape, Tile};
-use crate::item_icons;
+use crate::blocks::{atlas::tile as t, Tile};
+use crate::items::{self, Stack};
 use crate::mesh::{tile_rect, MeshData};
 use crate::world::{to_bevy, BlockMaterials, WorldMap};
 
@@ -144,16 +144,9 @@ fn item_frames(world: &PeWorld) -> Vec<ItemFrame> {
 /// The atlas tile and tint that show an item stack: a block's side, or an
 /// item's icon. `None` for an empty frame or an item without one.
 fn held_icon(item: &Tag) -> Option<(Tile, [f32; 3])> {
-    let id = item.get("id")?.as_i64()?;
-    let damage = item.get("Damage").and_then(Tag::as_i64).unwrap_or(0);
-    match id {
-        1..=255 => {
-            let look = blocks::look(id as u8, damage as u8);
-            (look.shape != Shape::Air).then_some((look.tiles[4], look.color))
-        }
-        256.. => Some((item_icons::icon(i16::try_from(id).ok()?, damage as i16)?, [1.0; 3])),
-        _ => None,
-    }
+    let id = i16::try_from(item.get("id")?.as_i64()?).ok()?;
+    let damage = item.get("Damage").and_then(Tag::as_i64).and_then(|d| i16::try_from(d).ok()).unwrap_or(0);
+    items::icon(Stack::new(id, damage, 1))
 }
 
 /// A coordinate frame for something hanging on a wall: `u` runs to the right
@@ -296,6 +289,7 @@ pub fn spawn(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::blocks::{self, Shape};
 
     fn sample() -> PeWorld {
         PeWorld::open_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../../worlds/My World")).unwrap()
