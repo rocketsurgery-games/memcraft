@@ -1,11 +1,11 @@
 ---
 id: mem-5d8c
 title: 'Containers: open and view contents'
-status: hairy
+status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T03:39:06Z'
+updated: '2026-11-02T02:53:40Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -20,3 +20,18 @@ Scope depends on the open question on the parent yak: view-only, or moving items
 ▸ 2026-11-01T03:39:06Z [herd]
 
 Scope per Joel (mem-f4c5 answer 2): view-only first — open a chest/furnace/etc. UI showing its slots from the block entity. Item moves split out to mem-834e.
+
+---
+▸ 2026-11-02T02:53:40Z [chest-1]
+kind: move
+from: hairy
+to: shaving
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD4BcZIBxBD-0Otq811F0oo4eGE3HRbr
+---
+
+moved: hairy -> shaving
+
+---
+▸ 2026-11-02T02:53:40Z [chest-1]
+
+Started on chest-1, base 0c5f2b8. Plan: ContainerView message from targeting, container_view.rs (panel), CHEST drive stage.
