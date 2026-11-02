@@ -13,10 +13,13 @@ use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
 
 use crate::blocks::{self, Shape};
+use crate::buttons::{press_ticks, PendingReleases, POWERED};
 use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
 use crate::interact::interact;
 use crate::physics::{Solids, EYE_HEIGHT, HALF_WIDTH, HEIGHT_BLOCKS};
+use crate::sign_editor::EditSign;
+use crate::signs;
 use crate::world::{self, WorldMap};
 
 /// How far the player reaches, in blocks.
@@ -152,7 +155,8 @@ fn can_place(existing: Block, block: Block, cell: IVec3, player: (Vec3, Vec3)) -
 }
 
 /// Clicks: the left button breaks the targeted block, the right one uses it
-/// (a door opens, say) or, if it does nothing, places a block against it.
+/// (a door opens, a lever flips, a button goes down, a sign's editor opens) or, if it does nothing, places a block against it.
+#[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or message it uses
 fn edit_blocks(
     mouse: Res<ButtonInput<MouseButton>>,
     cursor: Single<&CursorOptions, With<PrimaryWindow>>,
@@ -160,7 +164,9 @@ fn edit_blocks(
     hotbar: Res<Hotbar>,
     mut map: ResMut<WorldMap>,
     mut solids: ResMut<Solids>,
+    mut pending: ResMut<PendingReleases>,
     camera: Single<(&Transform, &Controller)>,
+    mut sign_clicks: MessageWriter<EditSign>,
 ) {
     let Some(hit) = target.0.filter(|_| is_locked(&cursor)) else {
         return;
@@ -174,11 +180,20 @@ fn edit_blocks(
     } else if mouse.just_pressed(PLACE_BUTTON) {
         let b = hit.block;
         let target = map.block(b.x, b.y, b.z);
+        // A sign opens its text editor (see `sign_editor`) rather than changing a block.
+        if signs::is_sign(target) {
+            sign_clicks.write(EditSign(b));
+            return;
+        }
         if let Some(edits) = interact(target, b, |p| map.block(p.x, p.y, p.z)) {
             for (p, (id, data)) in edits {
                 if world::set_block(&mut map, &mut solids, p.x, p.y, p.z, id, data) {
                     info!("toggled {target:?} at {b}: {p} is now {:?}", (id, data));
                 }
+            }
+            // A button that went down pops up again later.
+            if let Some(ticks) = press_ticks(target.0).filter(|_| target.1 & POWERED == 0) {
+                pending.press(b, ticks);
             }
             return;
         }

@@ -42,4 +42,4 @@ png = "0.18"
 # Bevy's wasm build needs JS randomness, too.
 getrandom = { version = "0.3", features = ["wasm_js"] }
 # To notice when the browser drops the pointer lock (Esc), which Bevy doesn't report.
-web-sys = { version = "0.3", features = ["Document", "Element", "Window"] }
+web-sys = { version = "0.3", features = ["Document", "Element", "Location", "Window"] }

@@ -66,7 +66,7 @@ const MOTIFS: [(&str, [u32; 4]); 26] = [
 
 /// A horizontal facing, numbered as Java does: 0 faces +z, 1 -x, 2 -z, 3 +x.
 /// Hanging things face away from the wall they hang on.
-type Facing = u8;
+pub type Facing = u8;
 
 /// The unit step `(x, z)` a facing looks along.
 fn step(facing: Facing) -> (i32, i32) {
@@ -158,14 +158,14 @@ fn held_icon(item: &Tag) -> Option<(Tile, [f32; 3])> {
 
 /// A coordinate frame for something hanging on a wall: `u` runs to the right
 /// as seen from the front, `v` up and `w` out of the wall, around `centre`.
-struct Wall {
+pub struct Wall {
     centre: [f32; 3],
     right: [f32; 3],
     forward: [f32; 3],
 }
 
 impl Wall {
-    fn new(centre: [f32; 3], facing: Facing) -> Self {
+    pub fn new(centre: [f32; 3], facing: Facing) -> Self {
         let (x, z) = step(facing);
         // Seen from the front (looking along -forward), right is forward
         // turned a quarter: +x for a wall facing +z.
@@ -200,7 +200,7 @@ impl Wall {
     }
 
     /// Adds one face of a box to `out`.
-    fn quad(&self, out: &mut MeshData, (lo, hi): ([f32; 3], [f32; 3]), (axis, positive): (usize, bool), color: [f32; 4], uv: [f32; 4]) {
+    pub fn quad(&self, out: &mut MeshData, (lo, hi): ([f32; 3], [f32; 3]), (axis, positive): (usize, bool), color: [f32; 4], uv: [f32; 4]) {
         let (corners, normal) = self.face(lo, hi, axis, positive);
         out.quad(corners, normal, color, uv);
     }

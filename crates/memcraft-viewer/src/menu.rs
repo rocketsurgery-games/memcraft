@@ -1,6 +1,7 @@
 //! The game menu: an overlay that is up whenever the pointer is free (Esc,
 //! the window losing focus, the browser dropping the lock, or before the
-//! first click) and gone while it is locked. It is the home of Save and,
+//! first click) and gone while it is locked, or while a [`Modal`] dialog
+//! (the sign editor) has the free pointer. It is the home of Save and,
 //! later, settings.
 //!
 //! Resume locks the pointer again, as does a click anywhere else on the
@@ -14,7 +15,7 @@
 use bevy::prelude::*;
 use bevy::window::{CursorOptions, PrimaryWindow};
 
-use crate::controls::{grab_pointer, is_locked, set_locked};
+use crate::controls::{grab_pointer, is_locked, set_locked, Modal};
 
 /// Whether the running viewer can save its world. Off until a saver exists
 /// (and for good in read-only builds); the menu greys out Save while it is.
@@ -55,7 +56,7 @@ const HELP: &str = "Click or Resume to look around (Esc releases the mouse)\n\
 WASD move - Q/E down/up - Shift fast - scroll: speed\n\
 F: fly/walk (walk: Space jumps) - 1-9: choose block\n\
 Left click: break block\n\
-Right click: open a door, or place block";
+Right click: use a door, lever or button, edit a sign, or place block";
 
 const BACKDROP: Color = Color::srgba(0.0, 0.0, 0.0, 0.55);
 const BUTTON: Color = Color::srgb(0.30, 0.30, 0.30);
@@ -117,9 +118,9 @@ fn spawn_menu(mut commands: Commands, save: Res<SaveAvailable>) {
         });
 }
 
-/// The menu is up exactly while the pointer is free.
-fn show_menu(cursor: Single<&CursorOptions, With<PrimaryWindow>>, mut menu: Single<&mut Node, With<MenuRoot>>) {
-    let display = if is_locked(&cursor) { Display::None } else { Display::Flex };
+/// The menu is up exactly while the pointer is free, and no dialog has it.
+fn show_menu(cursor: Single<&CursorOptions, With<PrimaryWindow>>, modal: Res<Modal>, mut menu: Single<&mut Node, With<MenuRoot>>) {
+    let display = if is_locked(&cursor) || modal.0 { Display::None } else { Display::Flex };
     if menu.display != display {
         menu.display = display;
     }
@@ -180,6 +181,7 @@ mod tests {
         let mut app = App::new();
         app.init_resource::<ButtonInput<MouseButton>>()
             .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<Modal>()
             .add_plugins(MenuPlugin)
             .add_systems(Update, grab_pointer);
         app.world_mut().spawn((Window { focused: true, ..default() }, CursorOptions::default(), PrimaryWindow));

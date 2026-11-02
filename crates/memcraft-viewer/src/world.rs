@@ -11,7 +11,7 @@ use std::collections::{BTreeSet, HashMap};
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
-use mcpe_world::{ChunkPos, Column, World as PeWorld, HEIGHT};
+use mcpe_world::{ChunkPos, Column, Tag, World as PeWorld, HEIGHT};
 
 use crate::blocks::{self, Shape};
 use crate::mesh::{self, MeshData};
@@ -31,6 +31,9 @@ pub struct WorldMap {
     /// Columns whose blocks changed since the world was loaded or last saved
     /// (unlike `dirty`, not their neighbours).
     edited: BTreeSet<ChunkPos>,
+    /// Cells whose block or block entity was edited since
+    /// [`WorldMap::take_edited_cells`], for what is drawn from block entities.
+    edited_cells: Vec<IVec3>,
 }
 
 impl WorldMap {
@@ -38,7 +41,7 @@ impl WorldMap {
     pub fn new(world: PeWorld) -> Self {
         let heights = world.columns.iter().map(|(pos, col)| (*pos, std::array::from_fn(|i| column_height(col, i % 16, i / 16)))).collect();
         let dirty = world.columns.keys().copied().collect();
-        Self { world, heights, dirty, edited: BTreeSet::new() }
+        Self { world, heights, dirty, edited: BTreeSet::new(), edited_cells: Vec::new() }
     }
 
     pub fn world(&self) -> &PeWorld {
@@ -59,10 +62,15 @@ impl WorldMap {
             return false;
         };
         let i = Column::index(lx, y as usize, lz);
+        // A block entity belongs to the block it was made for.
+        if col.ids[i] != id {
+            col.block_entities.retain(|be| !is_at(be, IVec3::new(x, y, z)));
+        }
         col.ids[i] = id;
         col.data[i] = data & 0x0f;
         self.heights.get_mut(&pos).unwrap()[lz * 16 + lx] = column_height(col, lx, lz);
 
+        self.edited_cells.push(IVec3::new(x, y, z));
         self.dirty.insert(pos);
         self.edited.insert(pos);
         // Faces on the far side of a column edge belong to the neighbour.
@@ -96,6 +104,33 @@ impl WorldMap {
         self.edited.clear();
     }
 
+    /// The block entity (chest contents, sign text, ...) of the block at `cell`.
+    pub fn block_entity(&self, cell: IVec3) -> Option<&Tag> {
+        self.world.columns.get(&column_of(cell))?.block_entities.iter().find(|be| is_at(be, cell))
+    }
+
+    /// Stores `entity` as the block entity of `cell`, replacing the one there.
+    /// It must name its position (`x`, `y`, `z`). Returns false (and changes
+    /// nothing) outside the loaded world. These are what saving writes.
+    pub fn set_block_entity(&mut self, cell: IVec3, entity: Tag) -> bool {
+        let Some(col) = self.world.columns.get_mut(&column_of(cell)).filter(|_| (0..HEIGHT as i32).contains(&cell.y)) else {
+            return false;
+        };
+        debug_assert!(is_at(&entity, cell), "a block entity names its cell");
+        match col.block_entities.iter_mut().find(|be| is_at(be, cell)) {
+            Some(old) => *old = entity,
+            None => col.block_entities.push(entity),
+        }
+        self.edited_cells.push(cell);
+        self.edited.insert(column_of(cell));
+        true
+    }
+
+    /// The cells edited since the last call, in order (a cell may repeat).
+    pub fn take_edited_cells(&mut self) -> Vec<IVec3> {
+        std::mem::take(&mut self.edited_cells)
+    }
+
     /// Brightness (0..1) of the air block at `(x, y, z)`, which a face looks into.
     pub fn light(&self, x: i32, y: i32, z: i32) -> f32 {
         let pos = ChunkPos { x: x.div_euclid(16), z: z.div_euclid(16) };
@@ -109,6 +144,15 @@ impl WorldMap {
     pub fn mesh_column(&self, pos: ChunkPos) -> mesh::ColumnMesh {
         mesh::mesh_column(&self.world, pos.x, pos.z, &|x, y, z| self.light(x, y, z))
     }
+}
+
+fn column_of(cell: IVec3) -> ChunkPos {
+    ChunkPos { x: cell.x.div_euclid(16), z: cell.z.div_euclid(16) }
+}
+
+/// Whether the block entity `be` is the one of `cell`.
+fn is_at(be: &Tag, cell: IVec3) -> bool {
+    ["x", "y", "z"].iter().zip(cell.to_array()).all(|(k, v)| be.get(k).and_then(Tag::as_i64) == Some(v as i64))
 }
 
 /// Highest opaque cube in one column position, or -1.

@@ -9,12 +9,16 @@
 //! it and opens the menu), WASD to move, Q/E down/up, Shift to go fast,
 //! scroll to change speed,
 //! F to switch between flying and walking (Space jumps), 1-9 to choose a block,
-//! left click to break the block in the crosshair, right click to place one.
+//! left click to break the block in the crosshair, right click to use a door,
+//! lever or button, or else to place one.
 
 mod blocks;
+mod buttons;
 mod catalog;
 mod controls;
+mod debug_view;
 mod entities;
+mod font;
 mod hotbar;
 mod interact;
 mod item_icons;
@@ -23,6 +27,8 @@ mod mesh;
 mod physics;
 #[cfg(not(target_arch = "wasm32"))]
 mod save;
+mod sign_editor;
+mod signs;
 mod targeting;
 mod world;
 
@@ -70,7 +76,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, menu::MenuPlugin))
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
@@ -150,7 +156,7 @@ fn setup(
         translucent: material(AlphaMode::Blend),
     });
 
-    let view = start_view(world);
+    let view = debug_view::requested().unwrap_or_else(|| start_view(world));
     commands.spawn((
         Camera3d::default(),
         // Colours are baked and final; tonemapping would only shift them
@@ -187,11 +193,11 @@ fn start_view(world: &PeWorld) -> Transform {
             Vec3::new(x as f32, y as f32 + 20.0, z as f32)
         }
     };
-    // Minecraft yaw 0 faces +Z and turns toward -X; positive pitch looks down.
     let (yaw, pitch) = match rot[..] {
         [yaw, pitch] => (yaw.to_radians(), pitch.to_radians()),
         _ => (0.0, 0.3),
     };
+    // Minecraft yaw 0 faces +Z and turns toward -X; positive pitch looks down.
     let dir = Vec3::new(-yaw.sin() * pitch.cos(), -pitch.sin(), yaw.cos() * pitch.cos());
     // Step back and up from the exact eye position, so the first frame shows
     // the surroundings rather than whatever the player was standing against.

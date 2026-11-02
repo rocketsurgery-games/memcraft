@@ -22,11 +22,18 @@ pub const LOCK_BUTTON: MouseButton = MouseButton::Left;
 pub const BREAK_BUTTON: MouseButton = MouseButton::Left;
 pub const PLACE_BUTTON: MouseButton = MouseButton::Right;
 
+/// Set while a dialog (the sign editor) owns the free pointer and the
+/// keyboard: the menu stays down, and a click on the scene does not lock the
+/// pointer. The dialog is the one that locks it again.
+#[derive(Resource, Default)]
+pub struct Modal(pub bool);
+
 pub struct ControlsPlugin;
 
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Solids>()
+            .init_resource::<Modal>()
             .add_systems(
                 Update,
                 (grab_pointer, (look, toggle_mode, scroll_speed, fly, walk).chain().run_if(pointer_locked)).chain(),
@@ -99,7 +106,7 @@ pub fn set_locked(cursor: &mut CursorOptions, locked: bool) {
 }
 
 /// A click of [`LOCK_BUTTON`] locks the pointer (unless it is on a menu
-/// button, which does its own thing), and it stays locked until
+/// button, which does its own thing, or a [`Modal`] is open), and it stays locked until
 /// Esc or until the window loses focus. In the browser, Esc is handled by the
 /// browser itself (the page never sees it), so the lock is re-read from the
 /// page. The click that locks must not also act on a block: `targeting`
@@ -108,13 +115,14 @@ pub fn grab_pointer(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Query<&Interaction, With<Button>>,
+    modal: Res<Modal>,
     mut window: Single<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
     #[cfg(target_arch = "wasm32")] mut browser_had_lock: Local<bool>,
 ) {
     let (window, cursor) = &mut *window;
     let locked = is_locked(cursor);
     let on_button = buttons.iter().any(|i| *i != Interaction::None);
-    if !locked && window.focused && !on_button && mouse.just_pressed(LOCK_BUTTON) {
+    if !locked && !modal.0 && window.focused && !on_button && mouse.just_pressed(LOCK_BUTTON) {
         set_locked(cursor, true);
     } else if locked && (keys.just_pressed(KeyCode::Escape) || !window.focused) {
         set_locked(cursor, false);
