@@ -48,6 +48,17 @@
 // list of [key, ms] like $KEYS. Orientation comes from
 // the face the crosshair meets and where the camera looks (see src/orient.rs).
 //
+// With $CAM aimed at a chest (or another container) and $CHEST also set, the
+// drive right-clicks the crosshair: the container's window opens (the pointer
+// lock must drop and the menu stay down; `chest-before.png`, `chest-open.png`).
+// E closes it and the pointer locks again (`chest-closed.png`); a second right
+// click and Esc close it leaving the pointer free (`chest-esc.png`: the menu),
+// and a click on the scene locks again. The stage edits no block (the final
+// count may still include the lock click, which sometimes acts on the block
+// it aims at before the view turns). The sample world's
+// chest `CAM=90.5,77.8,110.5,270,5` looks at holds eleven stacks (the camera is
+// checked by a test in src/targeting.rs).
+//
 // The menu hangs 200 px down: the buttons are 260x40 with
 // 10 px gaps under a title, so Resume and Controls sit at fixed places in a
 // 1280x720 viewport (see start.png).
@@ -234,6 +245,41 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
       orientCells += cells
     }
     console.log('placed:', logs.filter(l => /\bplaced /.test(l)))
+  }
+  if (process.env.CHEST) {
+    // A chest has to be looked at exactly. The lock click on SCENE turned the
+    // view by the 440 px it is left of the centre (a locked pointer's motion is
+    // measured from the centre), so move back to the centre, which turns it
+    // back, before looking.
+    const CENTRE = [640, 360]
+    const edits = () => logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length
+    const editsBefore = edits()
+    await page.mouse.move(...CENTRE)
+    await page.waitForTimeout(3000)
+    await shot('chest-before.png')
+    await page.mouse.click(...CENTRE, { button: 'right' })
+    await waitLock(false)
+    await page.waitForTimeout(3000)
+    console.log('locked with the chest open (must be null):', await locked())
+    await shot('chest-open.png')
+    await page.keyboard.press('e')
+    await waitLock(true)
+    await page.waitForTimeout(3000)
+    console.log('locked after E closed the chest (must be the canvas):', await locked())
+    await shot('chest-closed.png')
+    await page.mouse.click(...CENTRE, { button: 'right' })
+    await waitLock(false)
+    await page.waitForTimeout(3000)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(3000)
+    console.log('locked after Esc closed the chest (must be null):', await locked())
+    await shot('chest-esc.png')
+    await page.mouse.move(...SCENE)
+    await page.waitForTimeout(2000)
+    await page.mouse.click(...SCENE, { button: 'left' })
+    await waitLock(true)
+    console.log('locked after the next click:', await locked())
+    console.log('block edits made by the chest stage (must be 0):', edits() - editsBefore)
   }
   // Turn right, with no button held.
   for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }

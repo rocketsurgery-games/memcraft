@@ -11,11 +11,14 @@
 //! F to switch between flying and walking (Space jumps), 1-9 to choose a block,
 //! B to open the block picker (search, click a block for the selected slot),
 //! left click to break the block in the crosshair, right click to use a door,
-//! lever or button, or else to place one, middle click to pick the block.
+//! lever or button, open a chest or other container to look inside, or else to
+//! place a block, middle click to pick the block.
 
 mod blocks;
 mod buttons;
 mod catalog;
+mod container_view;
+mod containers;
 mod controls;
 mod debug_view;
 #[cfg(any(target_arch = "wasm32", test))]
@@ -80,7 +83,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin, toast::ToastPlugin, picker::PickerPlugin))
+        .add_plugins((ControlsPlugin, targeting::TargetingPlugin, buttons::ButtonsPlugin, menu::MenuPlugin, signs::SignsPlugin, sign_editor::SignEditorPlugin, container_view::ContainerViewPlugin, toast::ToastPlugin, picker::PickerPlugin))
         .insert_resource(ClearColor(SKY))
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)

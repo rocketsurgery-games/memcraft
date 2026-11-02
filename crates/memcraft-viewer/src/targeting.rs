@@ -16,6 +16,8 @@ use bevy::window::{CursorOptions, PrimaryWindow};
 
 use crate::blocks::{self, Shape};
 use crate::catalog;
+use crate::container_view::OpenContainer;
+use crate::containers;
 use crate::buttons::{press_ticks, PendingReleases, POWERED};
 use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PICK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
@@ -184,7 +186,7 @@ fn placement(
 }
 
 /// Clicks: the left button breaks the targeted block, the right one uses it
-/// (a door opens, a lever flips, a button goes down, a sign's editor opens) or, if it does nothing, places a block against it.
+/// (a door opens, a lever flips, a button goes down, a sign's editor or a container's window opens) or, if it does nothing, places a block against it.
 #[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or message it uses
 fn edit_blocks(
     mouse: Res<ButtonInput<MouseButton>>,
@@ -196,6 +198,7 @@ fn edit_blocks(
     mut pending: ResMut<PendingReleases>,
     camera: Single<(&Transform, &Controller)>,
     mut sign_clicks: MessageWriter<EditSign>,
+    mut container_clicks: MessageWriter<OpenContainer>,
 ) {
     let Some(hit) = target.0.filter(|_| is_locked(&cursor)) else {
         return;
@@ -212,6 +215,11 @@ fn edit_blocks(
         // A sign opens its text editor (see `sign_editor`) rather than changing a block.
         if signs::is_sign(target) {
             sign_clicks.write(EditSign(b));
+            return;
+        }
+        // So does a container (see `container_view`).
+        if containers::kind(target).is_some() {
+            container_clicks.write(OpenContainer(b));
             return;
         }
         if let Some(edits) = interact(target, b, |p| map.block(p.x, p.y, p.z)) {
@@ -611,5 +619,17 @@ mod tests {
         // Nothing to place against: a ladder on a floor.
         let floor = Hit { block: IVec3::new(0, 64, 0), normal: IVec3::Y };
         assert!(placement((65, 2), floor, 0.5, 0.0, FAR, air_but(&[])).is_empty());
+    }
+
+    /// The camera `web/drive.js` uses for its `CHEST` stage looks at a chest of
+    /// the sample world that holds things.
+    #[test]
+    fn the_chest_drive_camera_aims_at_a_chest_with_items() {
+        let map = WorldMap::new(crate::load_world(None).unwrap());
+        let view = crate::debug_view::view(Vec3::new(90.5, 77.8, 110.5), 270.0, 5.0);
+        let got = cast(view.translation, *view.forward(), WALK_REACH, |c| targetable(map.block(c.x, c.y, c.z)));
+        let chest = got.expect("the camera sees something").block;
+        assert_eq!(chest, IVec3::new(93, 77, 110));
+        assert!(crate::containers::contents(&map, chest).unwrap().slots.iter().any(|s| s.stack.is_some()));
     }
 }

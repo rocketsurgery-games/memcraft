@@ -68,7 +68,7 @@ const HELP: &str = "Click or Resume to look around (Esc releases the mouse)\n\
 WASD move - Q/E down/up - Shift fast - scroll: speed\n\
 F: fly/walk (walk: Space jumps) - 1-9: choose block - B: block picker (Esc closes)\n\
 Left click: break block - Middle click: pick block\n\
-Right click: use a door, lever or button, edit a sign, or place block";
+Right click: use a door, lever or button, edit a sign, open a chest, or place block";
 
 const BACKDROP: Color = Color::srgba(0.0, 0.0, 0.0, 0.55);
 const BUTTON: Color = Color::srgb(0.30, 0.30, 0.30);
