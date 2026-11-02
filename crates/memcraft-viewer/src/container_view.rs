@@ -55,8 +55,8 @@ impl Plugin for ContainerViewPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Open>().add_message::<OpenContainer>().add_systems(
             Update,
-            // After `grab_pointer`, so the click that closes the window (it
-            // locks the pointer again) is not also taken for a block click.
+            // After `grab_pointer`, so the key that closes the window (it
+            // locks the pointer again) is not also taken by it as a release.
             (close, open).chain().after(grab_pointer),
         );
     }

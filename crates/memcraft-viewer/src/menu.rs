@@ -5,8 +5,8 @@
 //! later, settings.
 //!
 //! Resume locks the pointer again, as does a click anywhere else on the
-//! scene (see [`grab_pointer`]). Neither click edits a block: `targeting`
-//! ignores clicks while the pointer is free, and runs before this one.
+//! scene (see [`grab_pointer`]). Neither click edits a block: a click that
+//! begins with the pointer free never reaches the world (see `WorldMouse`).
 //!
 //! Save is a hook for the saver (see `save`): it is greyed out until something
 //! sets [`SaveAvailable`], and then pressing it sends a [`SaveRequested`]
@@ -83,8 +83,8 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SaveAvailable>().init_resource::<SaveLabel>().add_message::<SaveRequested>().add_systems(Startup, spawn_menu).add_systems(
             Update,
-            // After `grab_pointer`, so a press on Resume doesn't lock the
-            // pointer before `targeting` has seen the click.
+            // After `grab_pointer`, so the lock a press on Resume sets is not
+            // taken by it as a release.
             (show_menu, press_buttons, style_buttons).after(grab_pointer),
         );
     }

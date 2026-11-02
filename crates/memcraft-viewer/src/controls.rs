@@ -10,6 +10,7 @@
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit};
+use bevy::input::InputSystems;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
@@ -29,12 +30,27 @@ pub const PICK_BUTTON: MouseButton = MouseButton::Middle;
 #[derive(Resource, Default)]
 pub struct Modal(pub bool);
 
+/// The mouse buttons as the scene sees them: a press shows up here only if
+/// the pointer was locked when the button went down, and it stays pressed
+/// until the button is released. A click that locks the pointer (or that
+/// lands on a menu button, or closes a dialog) began with the pointer free,
+/// so it never reaches the world, whatever order the systems run in.
+///
+/// Everything that acts on the world with a mouse button (`targeting`: break,
+/// place, pick) reads this instead of `ButtonInput<MouseButton>`.
+/// [`track_world_mouse`] fills it in `PreUpdate`, before any system that can
+/// change the lock.
+#[derive(Resource, Default)]
+pub struct WorldMouse(pub ButtonInput<MouseButton>);
+
 pub struct ControlsPlugin;
 
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Solids>()
             .init_resource::<Modal>()
+            .init_resource::<WorldMouse>()
+            .add_systems(PreUpdate, track_world_mouse.after(InputSystems))
             .add_systems(
                 Update,
                 (grab_pointer, (look, toggle_mode, scroll_speed, fly, walk).chain().run_if(pointer_locked)).chain(),
@@ -107,6 +123,43 @@ pub fn pointer_locked(cursor: Single<&CursorOptions, With<PrimaryWindow>>) -> bo
     is_locked(&cursor)
 }
 
+/// Whether the platform really holds the pointer. Native: the grab is
+/// immediate, so always. In the browser the lock is granted a frame or more
+/// after it is requested, and taken away (Esc) before this app notices, so
+/// the page is asked.
+#[cfg(target_arch = "wasm32")]
+fn platform_holds_pointer() -> bool {
+    web_sys::window().and_then(|w| w.document()).is_some_and(|d| d.pointer_lock_element().is_some())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn platform_holds_pointer() -> bool {
+    true
+}
+
+/// Mirrors this frame's mouse presses into [`WorldMouse`], keeping those that
+/// began with the pointer locked (as the platform sees it, see
+/// [`platform_holds_pointer`]). The lock state is read as of the start of the
+/// frame, so a press that locks the pointer in this frame, or that began
+/// while the browser had not granted the lock yet, is dropped for as long as
+/// the button is held.
+pub fn track_world_mouse(
+    mouse: Res<ButtonInput<MouseButton>>,
+    cursor: Single<&CursorOptions, With<PrimaryWindow>>,
+    mut world_mouse: ResMut<WorldMouse>,
+) {
+    let world_mouse = &mut world_mouse.0;
+    world_mouse.clear();
+    if is_locked(&cursor) && platform_holds_pointer() {
+        for button in mouse.get_just_pressed() {
+            world_mouse.press(*button);
+        }
+    }
+    for button in mouse.get_just_released() {
+        world_mouse.release(*button);
+    }
+}
+
 pub fn set_locked(cursor: &mut CursorOptions, locked: bool) {
     cursor.grab_mode = if locked { CursorGrabMode::Locked } else { CursorGrabMode::None };
     cursor.visible = !locked;
@@ -116,8 +169,8 @@ pub fn set_locked(cursor: &mut CursorOptions, locked: bool) {
 /// button, which does its own thing, or a [`Modal`] is open), and it stays locked until
 /// Esc or until the window loses focus. In the browser, Esc is handled by the
 /// browser itself (the page never sees it), so the lock is re-read from the
-/// page. The click that locks must not also act on a block: `targeting`
-/// handles clicks before this system, while the pointer is still free.
+/// page. The click that locks does not act on a block, whatever the system
+/// order: see [`WorldMouse`].
 pub fn grab_pointer(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -139,9 +192,7 @@ pub fn grab_pointer(
     // lock it granted and then dropped counts as a release.
     #[cfg(target_arch = "wasm32")]
     {
-        let has_lock = web_sys::window()
-            .and_then(|w| w.document())
-            .is_some_and(|d| d.pointer_lock_element().is_some());
+        let has_lock = platform_holds_pointer();
         if *browser_had_lock && !has_lock && is_locked(cursor) {
             set_locked(cursor, false);
         }

@@ -19,7 +19,7 @@ use crate::catalog;
 use crate::container_view::OpenContainer;
 use crate::containers;
 use crate::buttons::{press_ticks, PendingReleases, POWERED};
-use crate::controls::{grab_pointer, is_locked, walk, Controller, Mode, BREAK_BUTTON, PICK_BUTTON, PLACE_BUTTON};
+use crate::controls::{is_locked, walk, Controller, Mode, WorldMouse, BREAK_BUTTON, PICK_BUTTON, PLACE_BUTTON};
 use crate::hotbar::{Block, Hotbar};
 use crate::interact::interact;
 use crate::orient::orient;
@@ -48,8 +48,8 @@ impl Plugin for TargetingPlugin {
         app.init_resource::<Target>().add_systems(Startup, spawn_feedback).add_systems(
             Update,
             (
-                // Before the click that locks the pointer is handled, so that click only locks.
-                (edit_blocks, pick_block).before(grab_pointer),
+                // The click that locks the pointer never gets here, in any order: see `WorldMouse`.
+                (edit_blocks, pick_block),
                 // After the camera has moved, so the outline is where the view is.
                 (update_target, show_feedback).chain().after(walk),
             ),
@@ -189,7 +189,7 @@ fn placement(
 /// (a door opens, a lever flips, a button goes down, a sign's editor or a container's window opens) or, if it does nothing, places a block against it.
 #[allow(clippy::too_many_arguments)] // a Bevy system: each parameter is a resource or message it uses
 fn edit_blocks(
-    mouse: Res<ButtonInput<MouseButton>>,
+    mouse: Res<WorldMouse>,
     cursor: Single<&CursorOptions, With<PrimaryWindow>>,
     target: Res<Target>,
     hotbar: Res<Hotbar>,
@@ -203,13 +203,13 @@ fn edit_blocks(
     let Some(hit) = target.0.filter(|_| is_locked(&cursor)) else {
         return;
     };
-    if mouse.just_pressed(BREAK_BUTTON) {
+    if mouse.0.just_pressed(BREAK_BUTTON) {
         let b = hit.block;
         let old = map.block(b.x, b.y, b.z);
         if world::set_block(&mut map, &mut solids, b.x, b.y, b.z, 0, 0) {
             info!("broke {old:?} at {b}");
         }
-    } else if mouse.just_pressed(PLACE_BUTTON) {
+    } else if mouse.0.just_pressed(PLACE_BUTTON) {
         let b = hit.block;
         let target = map.block(b.x, b.y, b.z);
         // A sign opens its text editor (see `sign_editor`) rather than changing a block.
@@ -254,13 +254,13 @@ fn edit_blocks(
 /// north) stands for its catalog entry, see [`catalog::nearest`]; one it has
 /// no entry for at all (a lit furnace) is not picked.
 fn pick_block(
-    mouse: Res<ButtonInput<MouseButton>>,
+    mouse: Res<WorldMouse>,
     cursor: Single<&CursorOptions, With<PrimaryWindow>>,
     target: Res<Target>,
     map: Res<WorldMap>,
     mut hotbar: ResMut<Hotbar>,
 ) {
-    let Some(hit) = target.0.filter(|_| is_locked(&cursor) && mouse.just_pressed(PICK_BUTTON)) else {
+    let Some(hit) = target.0.filter(|_| is_locked(&cursor) && mouse.0.just_pressed(PICK_BUTTON)) else {
         return;
     };
     let (id, data) = map.block(hit.block.x, hit.block.y, hit.block.z);
@@ -350,6 +350,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+    use crate::controls::{track_world_mouse, LOCK_BUTTON};
 
     /// Casts through a world that is empty except for the given blocks.
     fn cast_in(blocks: &[(i32, i32, i32)], origin: Vec3, dir: Vec3, reach: f32) -> Option<Hit> {
@@ -460,6 +461,8 @@ mod tests {
             .insert_resource(Target(target))
             .init_resource::<Hotbar>()
             .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<WorldMouse>()
+            .add_systems(PreUpdate, track_world_mouse)
             .add_systems(Update, pick_block);
         let mut cursor = CursorOptions::default();
         crate::controls::set_locked(&mut cursor, true);
@@ -512,6 +515,113 @@ mod tests {
 
     const STONE: Block = (1, 0);
     const AIR: Block = (0, 0);
+
+    /// The stone block the crosshair is on, and the air cell above it, where a
+    /// placed block would go.
+    const AIMED: IVec3 = IVec3::new(48, 120, 40);
+    const ABOVE: IVec3 = IVec3::new(48, 121, 40);
+
+    /// What `edit_blocks`, `pick_block` and the pointer's systems make of a
+    /// click in the real app, without rendering or a real input device: the
+    /// pointer starts free (`locked` false) or locked, and `grab_pointer` runs
+    /// `grab_first` or after the editing systems.
+    fn click_app(locked: bool, grab_first: bool) -> App {
+        use crate::controls::{grab_pointer, set_locked, Modal};
+        use crate::buttons::PendingReleases;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(WorldMap::new(crate::load_world(None).unwrap()))
+            .insert_resource(Target(Some(Hit { block: AIMED, normal: IVec3::Y })))
+            .init_resource::<Hotbar>()
+            .init_resource::<Solids>()
+            .init_resource::<PendingReleases>()
+            .init_resource::<Modal>()
+            .init_resource::<WorldMouse>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .add_message::<EditSign>()
+            .add_message::<OpenContainer>()
+            .add_systems(PreUpdate, track_world_mouse);
+        let editing = (edit_blocks, pick_block);
+        if grab_first {
+            app.add_systems(Update, (grab_pointer, editing).chain());
+        } else {
+            app.add_systems(Update, (editing, grab_pointer).chain());
+        }
+        let mut map = app.world_mut().resource_mut::<WorldMap>();
+        assert!(map.set_block(AIMED.x, AIMED.y, AIMED.z, STONE.0, STONE.1));
+        assert!(map.set_block(ABOVE.x, ABOVE.y, ABOVE.z, AIR.0, AIR.1));
+        let mut cursor = CursorOptions::default();
+        set_locked(&mut cursor, locked);
+        app.world_mut().spawn((Window { focused: true, ..default() }, cursor, PrimaryWindow));
+        let transform = Transform::from_translation(AIMED.as_vec3() + Vec3::new(0.5, 3.5, 0.5)).looking_to(Vec3::NEG_Y, Vec3::X);
+        app.world_mut().spawn((Controller::new(&transform, 8.0, 30.0), transform));
+        app
+    }
+
+    /// One frame as `bevy_input` delivers it: the buttons are pressed (or
+    /// released) in `PreUpdate`, and cleared at the start of the next frame.
+    fn frame(app: &mut App, press: &[MouseButton], release: &[MouseButton]) {
+        let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+        mouse.clear();
+        press.iter().for_each(|b| mouse.press(*b));
+        release.iter().for_each(|b| mouse.release(*b));
+        app.update();
+    }
+
+    fn locked(app: &mut App) -> bool {
+        let mut cursors = app.world_mut().query::<&CursorOptions>();
+        is_locked(cursors.single(app.world()).unwrap())
+    }
+
+    fn blocks(app: &App) -> (Block, Block) {
+        let map = app.world().resource::<WorldMap>();
+        (map.block(AIMED.x, AIMED.y, AIMED.z), map.block(ABOVE.x, ABOVE.y, ABOVE.z))
+    }
+
+    #[test]
+    fn a_click_that_locks_the_pointer_edits_nothing_in_either_system_order() {
+        for grab_first in [true, false] {
+            // Left locks; the right and middle buttons go down in the same frame, and neither
+            // places nor picks. Held on, the buttons still do nothing.
+            let mut app = click_app(false, grab_first);
+            let before = Hotbar::default();
+            frame(&mut app, &[LOCK_BUTTON, PLACE_BUTTON, PICK_BUTTON], &[]);
+            assert!(locked(&mut app), "the click locks (grab_first: {grab_first})");
+            assert_eq!(blocks(&app), (STONE, AIR), "nothing is broken or placed (grab_first: {grab_first})");
+            assert_eq!(*app.world().resource::<Hotbar>(), before);
+            frame(&mut app, &[], &[]);
+            assert_eq!(blocks(&app), (STONE, AIR), "still held (grab_first: {grab_first})");
+
+            // The next click, with the pointer locked, does edit.
+            frame(&mut app, &[], &[LOCK_BUTTON, PLACE_BUTTON, PICK_BUTTON]);
+            frame(&mut app, &[BREAK_BUTTON], &[]);
+            assert_eq!(blocks(&app).0, AIR, "a locked click breaks (grab_first: {grab_first})");
+            frame(&mut app, &[PLACE_BUTTON], &[BREAK_BUTTON]);
+            assert_eq!(blocks(&app).1, STONE, "and a locked right click places (grab_first: {grab_first})");
+        }
+    }
+
+    #[test]
+    fn a_press_that_began_free_stays_out_of_the_world_while_it_is_held() {
+        for grab_first in [true, false] {
+            // The right button goes down on a free pointer (it does not lock). Something else
+            // (the Resume button) locks the pointer while the button is still down: the press
+            // did not begin locked, so it is not a click on the world.
+            let mut app = click_app(false, grab_first);
+            frame(&mut app, &[PLACE_BUTTON], &[]);
+            let mut cursors = app.world_mut().query::<&mut CursorOptions>();
+            crate::controls::set_locked(&mut cursors.single_mut(app.world_mut()).unwrap(), true);
+            frame(&mut app, &[], &[]);
+            assert_eq!(blocks(&app), (STONE, AIR), "(grab_first: {grab_first})");
+            assert!(!app.world().resource::<WorldMouse>().0.pressed(PLACE_BUTTON));
+            // Released and pressed again, it is a click on the world.
+            frame(&mut app, &[], &[PLACE_BUTTON]);
+            frame(&mut app, &[PLACE_BUTTON], &[]);
+            assert_eq!(blocks(&app).1, STONE, "(grab_first: {grab_first})");
+        }
+    }
 
     #[test]
     fn blocks_are_not_placed_inside_the_player() {

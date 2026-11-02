@@ -96,8 +96,8 @@ impl Plugin for SignEditorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Editor>().add_message::<EditSign>().add_systems(Startup, spawn_ui).add_systems(
             Update,
-            // After `grab_pointer`, so the click that closes the editor (it
-            // locks the pointer again) is not also taken for a block click.
+            // After `grab_pointer`, so the Esc that closes the editor (it
+            // locks the pointer again) is not also taken by it as a release.
             (type_text, press_buttons, open, show).chain().after(grab_pointer),
         );
     }

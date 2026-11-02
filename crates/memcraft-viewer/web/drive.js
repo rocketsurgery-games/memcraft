@@ -59,9 +59,9 @@
 // lock must drop and the menu stay down; `chest-before.png`, `chest-open.png`).
 // E closes it and the pointer locks again (`chest-closed.png`); a second right
 // click and Esc close it leaving the pointer free (`chest-esc.png`: the menu),
-// and a click on the scene locks again. The stage edits no block (the final
-// count may still include the lock click, which sometimes acts on the block
-// it aims at before the view turns). The sample world's
+// and a click on the scene locks again. The stage edits no block, and neither
+// does a click that locks the pointer (see `WorldMouse` in src/controls.rs),
+// so the final count is 0. The sample world's
 // chest `CAM=90.5,77.8,110.5,270,5` looks at holds eleven stacks (the camera is
 // checked by a test in src/targeting.rs).
 //
