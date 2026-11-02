@@ -1,11 +1,11 @@
 ---
 id: mem-4fcd
 title: Basic object placement and removal
-status: shaving
+status: shorn
 type: feature
 priority: 3
 created: '2026-10-31T23:19:11Z'
-updated: '2026-11-01T15:21:48Z'
+updated: '2026-11-02T04:24:52Z'
 ---
 
 We're not trying to reimplement minecraft game logic, just extend this viewer to allow for a simple creative-mode playground. To that end, we need the ability to remove and place blocks. Which also implies the ability to pick the current block. The most natural solution to this is to implement a very basic Minecraft-style toolbar, and a basic block/object search UI.
@@ -82,3 +82,18 @@ picked up
 ▸ 2026-11-01T15:21:48Z [herd]
 
 Answers recorded (herd): hotbar stays on 1-9, no scroll-wheel selection (touchpads); left break / right place / middle pick-block; Bevy UI only; creative rules as proposed; orientation stays in mem-b3b2. Unblocks mem-d0e5 picker and mem-d6f2 menu.
+
+---
+▸ 2026-11-02T04:24:52Z [herd-memcraft]
+
+All children shorn (56d9, 6934, 8d69, b3b2, d0e5, f4f7); basic placement and removal is complete on main da60fd3. Follow-ups noted on mem-b3b2.
+
+---
+▸ 2026-11-02T04:24:52Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn

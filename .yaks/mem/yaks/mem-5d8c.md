@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T03:09:20Z'
+updated: '2026-11-02T04:24:49Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -43,3 +43,9 @@ commit: 5f8c67c96d45799f35a4fb2b59f85220781c5cd8
 ---
 
 Checkpoint: containers.rs (slot reading, double-chest pairing, tests), container_view.rs (panel, Esc/E/Close), targeting hook, drive CHEST stage drafted. Unit tests pass (cargo test -p memcraft-viewer). Sample world has no double chest; chest at 93,77,110 has 11 stacks. Next: clippy native+wasm, web build, drive screenshot.
+
+![chest-before](mem-5d8c/chest-before.png)
+
+![chest-open](mem-5d8c/chest-open.png)
+
+![chest-esc](mem-5d8c/chest-esc.png)
