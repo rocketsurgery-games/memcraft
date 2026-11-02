@@ -1,11 +1,11 @@
 ---
 id: mem-d0e5
 title: 'Block picker: search and pick-block'
-status: hairy
+status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:13Z'
-updated: '2026-11-01T01:16:13Z'
+updated: '2026-11-02T01:15:17Z'
 parent: mem-4fcd
 depends_on:
 - mem-8d69
@@ -23,3 +23,23 @@ Choose any catalog block for the hotbar.
 ## Evidence
 
 drive.js: open the picker, type a search, screenshot the filtered grid; select one, place it.
+
+---
+▸ 2026-11-02T01:15:13Z [picker-1]
+kind: move
+from: hairy
+to: shaving
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2wYpIBxBD-0Otq811F0oo4eGE3HRbr
+---
+
+moved: hairy -> shaving
+
+---
+▸ 2026-11-02T01:15:13Z [picker-1]
+
+Decision: picker key is B, not E (E is already fly-up with Q). Herd decision.
+
+---
+▸ 2026-11-02T01:15:17Z [picker-1]
+
+Started Mon Nov  2 01:15:17 UTC 2026. Checkout: /home/user/memcraft-7. Farm: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-d0e5.md. Base a354d0d.
