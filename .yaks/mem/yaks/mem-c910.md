@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T00:07:26Z'
+updated: '2026-11-02T00:39:29Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -95,3 +95,43 @@ commit: 7696d35e8aeb23a0d5af15f68f8479a4f31cf31b
 ---
 
 Checkpoint: signs.rs/font.rs/sign_editor.rs + world/controls/menu/targeting/main hooks written, 9 sign unit tests pass. Commits 20f31f2 (repair: the paint files a48f18b lacked) and 7696d35 (wip). Next: clippy native/wasm, web build, screenshots.
+
+![sign-text](mem-c910/sign-text.png)
+
+![sign-editor](mem-c910/sign-editor.png)
+
+![sign-editor-typed](mem-c910/sign-editor-typed.png)
+
+![sign-edited](mem-c910/sign-edited.png)
+
+---
+▸ 2026-11-02T00:39:29Z [sign-2]
+
+Summary (sign-2): signs render their four lines and can be edited. Final commit f3952ab (on 7696d35 and 20f31f2, see below).
+
+Shape:
+
+- `font.rs`: 5x8 ASCII bitmap font, `render()` draws four centred lines into a 96x48 RGBA image (one block wide, half a block tall; `§x` codes skipped, other characters show `?`).
+- `signs.rs`: reads `Text1`..`Text4` (or one `Text` with newlines), `with_lines()` writes back in the same form keeping other entries. One quad entity per sign with text, in front of the board (standing 63 and wall 68, using the same facing as `blocks::model`). `sync` redraws signs whose cell was edited (`WorldMap::take_edited_cells`).
+- `sign_editor.rs`: dialog with 4 lines + Done/Cancel. Typing, Backspace, Enter (next line, saves after the last), Up/Down/Tab, click a line, Esc cancels. 15 characters per line, ASCII only.
+- `world.rs`: `block_entity`, `set_block_entity`, `take_edited_cells`; `set_block` drops the block entity when the block id changes.
+- `controls.rs`/`menu.rs`: `Modal` flag (see Decision above). `targeting.rs`: 5-line hook sending `EditSign` before the interact rule; `interact.rs` is untouched (lever-1 edits it).
+- `main.rs`: `?view=x,y,z,yaw,pitch` page address (wasm only, via `document.url()`), `drive.js`: `VIEW`/`ACTIONS` env, and a pause before the lock click so a mouse jump no longer turns the view.
+- README and the menu's Controls help mention signs.
+
+Evidence (all on f3952ab's tree):
+
+- `cargo test --workspace`: all ok, 83 viewer tests, incl. 9 new: four lines read from both forms (`signs::tests::the_four_lines_are_read_from_either_form`), the sample world's 24 signs and the waterfall sign at (14,70,45), text on the front of the board for 4 orientations, break/edit bookkeeping, typing logic, and an App test of open/Esc/save with the pointer lock and `Modal`.
+- `cargo clippy --workspace --all-targets -- -D warnings`: clean (EXIT 0).
+- `RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo clippy -p memcraft-viewer --target wasm32-unknown-unknown -- -D warnings`: clean (EXIT 0).
+- `sh crates/memcraft-viewer/web/build.sh`: builds (23M wasm, no wasm-opt on this runner).
+- Screenshots, attached: `NODE_PATH=~/tools/drive/node_modules VIEW="14.5,70.9,48.0,180,0" ACTIONS='[...]' node crates/memcraft-viewer/web/drive.js crates/memcraft-viewer/web/dist OUT` -> `sign-text.png` (waterfall sign: "i love / this / waterfall"), `sign-editor.png` and `sign-editor-typed.png` (dialog over the scene, no menu; a pressed `KeyW` typed a "w" and did not move the camera), `sign-edited.png` (text now "hello worldw / this / waterfall"). The run logged: locked after right click: null; after saving: `memcraft`; block edits logged (must be 0): 0.
+
+Known gaps:
+
+- Monospaced font, no colours/formatting, typing is ASCII only (existing non-ASCII text is kept but shown as `?`).
+- Standing signs are drawn in quarter turns by `blocks::standing_sign`, so the text follows that, not the 16 angles.
+- Saved text is in the block entity only; nothing writes it to disk until mem-a86b/mem-5219.
+- Text is not shaded by light.
+- Not tested natively (no display here): the editor in a native window, and Done/Cancel/line buttons by mouse (unit-tested only through keys).
+- Repo state: a48f18b's mem-15e6 commits were empty; commit 20f31f2 adds the files they should have had (entities.rs, item_icons.rs, paintings, textures, build.rs...). Drop it if the herd has its own fix. `edit_blocks` needs `#[allow(clippy::too_many_arguments)]` now (8 params).
