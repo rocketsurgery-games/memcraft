@@ -1,11 +1,11 @@
 ---
 id: mem-dc6b
 title: 'Native: load a world dir from the command line, save in place with backup'
-status: shaving
+status: shorn
 type: task
 priority: 3
 created: '2026-11-01T16:25:13Z'
-updated: '2026-11-02T00:02:38Z'
+updated: '2026-11-02T00:11:17Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -105,3 +105,18 @@ Not done / known gaps:
 - The saved `db/` has no `LOCK` file (the old one did; it stays in the backup). LevelDB recreates it.
 - Backups are never pruned. Save feedback is log-only: UI toast and the browser half belong to mem-5219.
 - `MEMCRAFT_WORLD` still picks the embedded world at build time, unchanged.
+
+---
+▸ 2026-11-02T00:11:17Z [herd-memcraft]
+
+Landed 3c0db4d on main (native-1's a22c792; README conflict with paintings line resolved). Herd re-ran on main: cargo test --workspace (79 viewer tests), clippy native+wasm clean, web/build.sh OK. Gaps: native window not run (no display), lighting stale, untested in real PE, no LOCK file in saved db/, backups never pruned, log-only feedback.
+
+---
+▸ 2026-11-02T00:11:17Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
