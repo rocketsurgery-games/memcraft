@@ -30,6 +30,7 @@ mod interact;
 mod item_icons;
 mod menu;
 mod mesh;
+mod mobs;
 mod orient;
 mod physics;
 mod picker;
@@ -90,7 +91,7 @@ fn main() {
         .add_plugins(hotbar::HotbarPlugin)
         .add_systems(Startup, setup)
         // After `Startup`, so the world and materials `setup` inserts are there.
-        .add_systems(PostStartup, entities::spawn)
+        .add_systems(PostStartup, (entities::spawn, mobs::spawn))
         .add_systems(Update, world::remesh)
         .run();
 }

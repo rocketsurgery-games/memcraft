@@ -101,7 +101,7 @@ fn covered_by_sibling(boxes: &[Box16], i: usize, face: usize) -> bool {
 /// (bottom-left, bottom-right, top-right, top-left seen from outside), with a
 /// fixed light factor per direction so shapes read clearly. The order matches
 /// `Look::tiles`.
-const FACES: [([i32; 3], [[f32; 3]; 4], f32); 6] = [
+pub const FACES: [([i32; 3], [[f32; 3]; 4], f32); 6] = [
     ([1, 0, 0], [[1., 0., 1.], [1., 0., 0.], [1., 1., 0.], [1., 1., 1.]], 0.8),
     ([-1, 0, 0], [[0., 0., 0.], [0., 0., 1.], [0., 1., 1.], [0., 1., 0.]], 0.8),
     ([0, 1, 0], [[0., 1., 1.], [1., 1., 1.], [1., 1., 0.], [0., 1., 0.]], 1.0),
