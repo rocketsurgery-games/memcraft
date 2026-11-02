@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 4
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-02T04:40:15Z'
+updated: '2026-11-02T05:01:13Z'
 parent: mem-f5cf
 depends_on:
 - mem-a86b
@@ -45,3 +45,11 @@ commit: baf056f0ba36fcf4effbeb7367b8a9df4a578e11
 ---
 
 checkpoint: mcpe-world has wire (pack/unpack world and columns) + save_columns (backup, moved from viewer); crates/memcraft-server done with 7 passing tests (probe, round trip with backup, bad body, stale viewers, static). Next: viewer wasm side, drive, README.
+
+---
+▸ 2026-11-02T05:01:13Z [server-1]
+kind: checkpoint
+commit: e2c0f5b8af475409b2a61ebcdbc7f0796a6f9bc0
+---
+
+checkpoint: viewer side (server.rs, index.html probe, drive HOSTED) done; cargo test --workspace and clippy native + wasm clean. Next: web/build.sh and the Playwright drive against the server.
