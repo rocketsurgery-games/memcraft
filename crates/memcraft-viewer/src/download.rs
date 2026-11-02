@@ -4,9 +4,8 @@
 //!
 //! The viewer in the browser only has the embedded world's files, so the
 //! zip is built from those every time: the edited columns are put over a
-//! fresh [`WorldWriter`] (the same step as the native save, see
-//! `save::edited_world`) and the edits are *not* marked saved, as the next
-//! download must hold them again.
+//! fresh [`WorldWriter`] (the same step as the native save) and the edits
+//! are *not* marked saved, as the next download must hold them again.
 //!
 //! Building the zip is plain code (tested natively); only handing it to the
 //! browser, [`start_download`], needs the wasm target.
@@ -17,7 +16,6 @@ use mcpe_world::SavedWorld;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
-use crate::save::edited_world;
 use crate::world::WorldMap;
 use crate::{embedded_writer, world_files};
 
@@ -33,7 +31,9 @@ pub struct WorldZip {
 /// The embedded world with `map`'s edits, zipped.
 pub fn embedded_world_zip(map: &WorldMap) -> Result<WorldZip, Box<dyn std::error::Error>> {
     let columns = map.edited_columns();
-    let saved = edited_world(embedded_writer()?, &columns)?;
+    let mut writer = embedded_writer()?;
+    writer.put_columns(&columns)?;
+    let saved = writer.finish()?;
     let folder = folder_name(map.world().name().unwrap_or(""));
     let bytes = zip_world(&folder, &saved, world_files::EXTRA_FILES)?;
     Ok(WorldZip { file_name: format!("{folder}.zip"), bytes, columns: columns.len() })

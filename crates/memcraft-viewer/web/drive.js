@@ -26,6 +26,12 @@
 // old=id` for the block it broke, and resumes. The zip is then checked with
 // `cargo test -p memcraft-viewer -- --ignored drives_download` (see
 // src/download.rs), which wants the unzipped folder and that line's x,y,z.
+// Against a running memcraft-server (pass its URL, e.g. http://127.0.0.1:8080/;
+// see the README) also set $HOSTED: the button then saves to the server
+// (the drive waits for the "Saved N columns to the server" log and screenshots
+// it), no zip is stored, and at the end the page is reloaded (`reloaded.png`).
+// The same ignored test, with DRIVE_WORLD the served world directory, checks
+// that the edit is on disk.
 // With $PICKER also set (and $CAM aimed at open air or a flat surface), the
 // drive then presses B (the picker opens: the pointer lock must drop and the
 // menu stay down; `picker-open.png`), types $PICKER as the search
@@ -89,6 +95,13 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   // SwiftShader frames are slow; give screenshots time.
   const shot = name => page.screenshot({ path: path.join(out, name), timeout: 120000 })
   const locked = () => page.evaluate(() => document.pointerLockElement?.id ?? null)
+  // Resolves to the first log line matching `re` (or undefined after `ms`).
+  const waitLog = async (re, ms) => {
+    for (const end = Date.now() + ms; Date.now() < end; await page.waitForTimeout(250)) {
+      const found = logs.find(l => re.test(l))
+      if (found) return found
+    }
+  }
   // Software-rendered frames take a while, so Bevy may need seconds to react.
   const waitLock = (want) => page.waitForFunction(w => (document.pointerLockElement !== null) === w, want, { timeout: 20000 }).catch(() => {})
 
@@ -136,12 +149,20 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
     await waitLock(false)
     await page.waitForTimeout(3000)
     await shot('save-menu.png')
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 60000 }),
-      page.mouse.click(...SAVE, { button: 'left' }),
-    ])
-    await download.saveAs(path.join(out, 'world.zip'))
-    console.log('downloaded:', download.suggestedFilename())
+    if (process.env.HOSTED) {
+      // Behind memcraft-server the button saves to the server instead.
+      await page.mouse.click(...SAVE, { button: 'left' })
+      const saved = await waitLog(/Saved \d+ columns? to the server/, 60000)
+      console.log('saved:', saved)
+      if (!saved) throw new Error('the server did not report the save')
+    } else {
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 60000 }),
+        page.mouse.click(...SAVE, { button: 'left' }),
+      ])
+      await download.saveAs(path.join(out, 'world.zip'))
+      console.log('downloaded:', download.suggestedFilename())
+    }
     await shot('saved.png')
     await page.waitForTimeout(6000)
     await shot('saved-later.png') // the feedback has gone again
@@ -305,6 +326,14 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
   await waitLock(true)
   console.log('locked after clicking Resume:', await locked())
   console.log(`block edits logged (must be ${(process.env.LEVER ? 1 : 0) + (process.env.SAVE ? 1 : 0) + (process.env.PICKER ? 1 : 0) + orientCells}):`, logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length)
+  if (process.env.HOSTED && process.env.SAVE) {
+    // A reload loads the saved world from the server: the broken block stays
+    // broken (`reloaded.png`; the same camera as `save-menu.png`).
+    await page.reload({ timeout: 120000 })
+    await page.waitForFunction(() => !document.getElementById('loading'), null, { timeout: 180000 })
+    await page.waitForTimeout(+(process.env.WAIT || 15000))
+    await shot('reloaded.png')
+  }
   printLogs()
   await browser.close(); server.close()
 })().catch(e => { console.error(String(e).split('\n')[0]); printLogs(); process.exit(1) })

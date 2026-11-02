@@ -23,7 +23,7 @@ crates/memcraft-viewer/web/build.sh              # browser build -> crates/memcr
 python3 -m http.server -d crates/memcraft-viewer/web/dist
 ```
 
-Natively, a world directory argument (the folder holding `level.dat` and `db/`) opens that world instead of the embedded one, and Save (in the menu, or Ctrl+S) writes the edited columns back into it. The previous `db/` is first copied to `db.backup-<UTC time>` in the same directory; backups are never deleted. Heights are recomputed for edited columns, but lighting is not, and the saved world has not yet been tried in Pocket Edition itself. The embedded world and the browser build cannot save.
+Natively, a world directory argument (the folder holding `level.dat` and `db/`) opens that world instead of the embedded one, and Save (in the menu, or Ctrl+S) writes the edited columns back into it. The previous `db/` is first copied to `db.backup-<UTC time>` in the same directory; backups are never deleted. Heights are recomputed for edited columns, but lighting is not, and the saved world has not yet been tried in Pocket Edition itself. The embedded world cannot be saved. The browser build offers a zip of the world to download instead ("Download world (.zip)"), unless it is served by the world server below.
 
 Controls: click to capture the mouse (Esc releases it and opens the menu: Resume, Save (native, with a world directory), and a controls help; the other controls only act while the mouse is captured), WASD to move, Q/E for down/up, Shift to go fast, scroll to change speed, F to switch between flying and walking (walking has gravity and solid blocks; Space jumps), 1-9 to choose a block in the hotbar, B to open the block picker (type to search the catalog, hover for names, click a block to put it in the selected slot, Esc to close), middle click to pick the block in the crosshair into the selected slot, left click to break the block in the crosshair, right click to open or close a door, trapdoor or fence gate, flip a lever or press a button (it pops back after a second or so), edit the four lines of a sign (type, Enter for the next line and to save after the last, Esc to cancel; the text is drawn on the sign), open a chest, barrel, furnace, hopper, dispenser or other container to look at what it holds (view only: E, Esc or its Close button closes the window; Esc leaves the mouse free, E captures it again), or else to place the selected block against the block in the crosshair. Blocks are textured with Pixel Perfection by XSSheep (CC BY-SA 4.0, see `crates/memcraft-viewer/assets/ATTRIBUTION.md`); blocks the pack doesn't cover fall back to flat colours. Sign text, paintings and item frames in the world are drawn too (paintings and item frames are static: they cannot be targeted or removed). In the browser, `?cam=x,y,z,yaw,pitch` after the page address (natively, the `MEMCRAFT_CAM` environment variable) starts the camera at that spot. The browser build needs `rustup target add wasm32-unknown-unknown` and a `wasm-bindgen-cli` matching the version in `Cargo.lock`.
 
@@ -49,11 +49,25 @@ pick it again. It screenshots `picker-open.png`, `picker-search.png`,
 `picker-hover.png`, `picker-picked.png`, `picker-closed.png`,
 `picker-placed.png`, and `picker-pickblock.png`.
 
+## Host a world and save edits to it
+
+`memcraft-server` serves the browser build and one world directory, and lets the viewer save its edits into that directory, so a hosted instance persists them. It has no authentication: use it locally or on a trusted LAN.
+
+```sh
+crates/memcraft-viewer/web/build.sh
+cargo run --release -p memcraft-server -- --world "path/to/world" [--web crates/memcraft-viewer/web/dist] [--addr 127.0.0.1:8080]
+```
+
+Open <http://127.0.0.1:8080/> (`--addr 0.0.0.0:8080` serves the LAN). The page finds the server by asking for `/api/world`, loads the server's world instead of the embedded one, and the menu's Save (and Ctrl+S) says "Save to server": it sends only the columns edited since the last save, and the server puts them over its copy of the world, after copying `db/` to `db.backup-<UTC time>` (the same as the native viewer's Save; backups are never deleted). Reloading the page shows the saved edits. Several viewers may edit the same world: a save only replaces its own columns, so the last save of a column wins, and a viewer does not see another's edits until it reloads. The deployment on GitHub Pages has no server behind it, so stays read-only (the embedded world, with the zip download).
+
+The endpoints are `GET /api/world` (the probe: `{"name": ...}`), `GET /api/world/files` (the world's files, packed) and `PUT /api/world/columns` (edited columns, packed; see `mcpe_world::pack_columns`).
+
 ## Crates
 
 - `crates/nbt`: NBT reader/writer for both Bedrock (little-endian) and Java (big-endian).
 - `crates/mcpe-world`: reads LevelDB-era Pocket Edition worlds (0.9 through 0.17: `LegacyTerrain` and v0 sub-chunks) and writes edited columns back (`WorldWriter`; see the crate docs). It works from an in-memory copy, so the source world is never modified until you `write_dir`, and it builds for `wasm32-unknown-unknown`.
 - `crates/memcraft-viewer`: the Bevy 0.19 fly-through viewer. The world is embedded at build time; set `MEMCRAFT_WORLD=<dir>` to use a different one.
+- `crates/memcraft-server`: the world server above (axum).
 - `crates/mcpe2java`: converts those worlds to Java Edition 1.12.2 Anvil, the last numeric-id version, so the conversion is close to lossless. It recomputes lighting, because PE sub-chunks store none.
 
 `worlds/My World` is a real PE ~0.16 world (2016) and serves as the test fixture: `cargo test`.

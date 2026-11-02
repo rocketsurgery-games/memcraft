@@ -103,11 +103,17 @@ impl WorldMap {
             .collect()
     }
 
-    /// Forgets the edits: they are now on disk. (The browser's download
-    /// does not: each zip holds all edits since the page loaded.)
-    #[cfg_attr(target_arch = "wasm32", allow(dead_code, reason = "the browser keeps its edits"))]
+    /// Forgets the edits: they are now on disk (or on their way to the world
+    /// server, see [`WorldMap::mark_unsaved`]). The browser's download does
+    /// not: each zip holds all edits since the page loaded.
     pub fn mark_saved(&mut self) {
         self.edited.clear();
+    }
+
+    /// Marks `positions` edited again: a save that sent them failed.
+    #[cfg(target_arch = "wasm32")]
+    pub fn mark_unsaved(&mut self, positions: impl IntoIterator<Item = ChunkPos>) {
+        self.edited.extend(positions);
     }
 
     /// The block entity (chest contents, sign text, ...) of the block at `cell`.

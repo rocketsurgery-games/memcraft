@@ -51,6 +51,11 @@ impl WorldWriter {
         Ok(())
     }
 
+    /// [`put_column`](Self::put_column) for each of `columns`.
+    pub fn put_columns(&mut self, columns: &[Column]) -> Result<()> {
+        columns.iter().try_for_each(|col| self.put_column(col))
+    }
+
     /// Flushes the database and returns the world's files.
     pub fn finish(self) -> Result<SavedWorld> {
         Ok(SavedWorld { level_dat: self.level_dat, db_files: self.db.close()? })

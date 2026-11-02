@@ -34,6 +34,8 @@ mod orient;
 mod physics;
 mod picker;
 mod save;
+#[cfg(target_arch = "wasm32")]
+mod server;
 mod sign_editor;
 mod signs;
 mod targeting;
@@ -111,11 +113,19 @@ fn world_dir_arg() -> Option<PathBuf> {
     None
 }
 
-/// Loads the world in `dir`, or the embedded one.
+/// Loads the world in `dir`, or the embedded one (in the browser, the world
+/// server's if there is one).
 fn load_world(dir: Option<&Path>) -> mcpe_world::Result<PeWorld> {
     match dir {
         Some(dir) => PeWorld::open_dir(dir),
-        None => PeWorld::from_files(world_files::LEVEL_DAT, embedded_db_files()),
+        None => {
+            // Behind a world server, its world instead of the embedded one.
+            #[cfg(target_arch = "wasm32")]
+            if let Some(hosted) = server::hosted_world() {
+                return hosted;
+            }
+            PeWorld::from_files(world_files::LEVEL_DAT, embedded_db_files())
+        }
     }
 }
 

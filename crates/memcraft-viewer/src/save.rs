@@ -3,7 +3,7 @@
 //!
 //! Both send [`SaveRequested`]; [`save_on_request`] answers it by saving the
 //! edited columns (see `WorldMap::edited_columns`; they are re-encoded over
-//! the world's own files, see [`edited_world`], and lighting is not
+//! the world's own files, see [`mcpe_world::save_columns`], and lighting is not
 //! recomputed, so edited columns keep their old light) and reports the
 //! result as a [`Toast`], which is also logged.
 //!
@@ -15,15 +15,16 @@
 //! - **Browser:** the page has no place to write to, so the button says
 //!   "Download world (.zip)" and offers the whole world, edits included, as a
 //!   zip (see `download`).
+//! - **Browser behind a world server:** the button says "Save to server" and
+//!   sends the edited columns to it (see `server`).
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 use std::path::PathBuf;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use bevy::prelude::*;
-use mcpe_world::{Column, SavedWorld, WorldWriter};
+#[cfg(not(target_arch = "wasm32"))]
+use mcpe_world::{save_columns, Saved};
 
 use crate::menu::{SaveAvailable, SaveRequested};
 use crate::toast::Toast;
@@ -48,7 +49,12 @@ impl Plugin for SavePlugin {
         #[cfg(target_arch = "wasm32")]
         {
             debug_assert!(self.dir.is_none(), "the browser has no world directory");
-            app.insert_resource(SaveAvailable(true)).insert_resource(crate::menu::SaveLabel("Download world (.zip)"));
+            app.insert_resource(SaveAvailable(true));
+            if crate::server::hosted() {
+                app.insert_resource(crate::menu::SaveLabel("Save to server")).add_plugins(crate::server::ServerSavePlugin);
+                return;
+            }
+            app.insert_resource(crate::menu::SaveLabel("Download world (.zip)"));
         }
         app.insert_resource(WorldDir(self.dir.clone()));
         app.add_systems(Update, (save_shortcut, save_on_request).chain());
@@ -56,7 +62,7 @@ impl Plugin for SavePlugin {
 }
 
 /// Ctrl+S asks for a save, like the menu button.
-fn save_shortcut(keys: Res<ButtonInput<KeyCode>>, mut saves: MessageWriter<SaveRequested>) {
+pub(crate) fn save_shortcut(keys: Res<ButtonInput<KeyCode>>, mut saves: MessageWriter<SaveRequested>) {
     let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
     if ctrl && keys.just_pressed(KeyCode::KeyS) {
         saves.write(SaveRequested);
@@ -110,82 +116,24 @@ fn save_now(map: &mut WorldMap, _dir: Option<&std::path::Path>) -> Result<String
     Ok(format!("Downloading {} ({edits})", zip.file_name))
 }
 
-fn columns(n: usize) -> String {
+pub(crate) fn columns(n: usize) -> String {
     format!("{n} column{}", if n == 1 { "" } else { "s" })
 }
 
-/// The world of `writer` with `columns` put over it, ready to be written out.
-/// Both the native save and the browser's download go through this.
-pub fn edited_world(mut writer: WorldWriter, columns: &[Column]) -> mcpe_world::Result<SavedWorld> {
-    for col in columns {
-        writer.put_column(col)?;
-    }
-    writer.finish()
-}
-
-/// What a save wrote.
-#[cfg(not(target_arch = "wasm32"))]
-#[derive(Debug)]
-pub struct Saved {
-    pub columns: usize,
-    /// The copy of the previous `db/`.
-    pub backup: PathBuf,
-}
-
 /// Writes the columns edited in `map` into the world directory `dir`, after
-/// copying its `db/` to a backup. `None` if there was nothing to save.
+/// copying its `db/` to a backup (see [`mcpe_world::save_columns`]). `None` if
+/// there was nothing to save.
 ///
-/// The world is re-read from disk and only the edited columns are put over
-/// it, so whatever else is in the files stays as it was. On error nothing in
-/// `dir` has changed or (if the final swap itself fails) the old `db/` is
-/// still complete; the edits stay marked so a later save retries them.
+/// On error nothing in `dir` has changed or (if the final swap itself fails)
+/// the old `db/` is still complete; the edits stay marked so a later save
+/// retries them.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_world(map: &mut WorldMap, dir: &Path) -> Result<Option<Saved>, Box<dyn std::error::Error>> {
-    let columns = map.edited_columns();
-    if columns.is_empty() {
-        return Ok(None);
+    let saved = save_columns(dir, &map.edited_columns())?;
+    if saved.is_some() {
+        map.mark_saved();
     }
-    let world = edited_world(WorldWriter::open_dir(dir)?, &columns)?;
-    let backup = backup_db(dir)?;
-    world.write_dir(dir)?;
-    map.mark_saved();
-    Ok(Some(Saved { columns: columns.len(), backup }))
-}
-
-/// Copies `dir/db` to a new `dir/db.backup-<UTC time>` and returns it.
-#[cfg(not(target_arch = "wasm32"))]
-fn backup_db(dir: &Path) -> std::io::Result<PathBuf> {
-    let stamp = utc_stamp(SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs()));
-    // Two saves in one second must not share a backup.
-    let backup = (1..)
-        .map(|n| dir.join(if n == 1 { format!("db.backup-{stamp}") } else { format!("db.backup-{stamp}-{n}") }))
-        .find(|p| !p.exists())
-        .unwrap();
-    std::fs::create_dir(&backup)?;
-    for entry in std::fs::read_dir(dir.join("db"))? {
-        let entry = entry?;
-        if entry.file_type()?.is_file() {
-            std::fs::copy(entry.path(), backup.join(entry.file_name()))?;
-        }
-    }
-    Ok(backup)
-}
-
-/// `20261101-232210`: the UTC date and time of a Unix timestamp.
-#[cfg(not(target_arch = "wasm32"))]
-fn utc_stamp(secs: u64) -> String {
-    let (days, rem) = ((secs / 86400) as i64, secs % 86400);
-    // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
-    let z = days + 719468;
-    let era = z.div_euclid(146097);
-    let doe = z.rem_euclid(146097);
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    format!("{year:04}{month:02}{day:02}-{:02}{:02}{:02}", rem / 3600, rem % 3600 / 60, rem % 60)
+    Ok(saved)
 }
 
 #[cfg(test)]
@@ -248,13 +196,6 @@ mod tests {
     fn edit(map: &mut WorldMap, cx: i32, cz: i32, local: (i32, i32, i32), id: u8) {
         let (x, y, z) = (cx * 16 + local.0, local.1, cz * 16 + local.2);
         assert!(map.set_block(x, y, z, id, 0), "({x}, {y}, {z}) is not in the world");
-    }
-
-    #[test]
-    fn utc_stamp_formats_unix_time() {
-        assert_eq!(utc_stamp(0), "19700101-000000");
-        assert_eq!(utc_stamp(951_827_696), "20000229-123456");
-        assert_eq!(utc_stamp(1_793_575_330), "20261101-232210");
     }
 
     #[test]

@@ -44,11 +44,15 @@
 mod db;
 mod encode;
 mod key;
+mod save;
+mod wire;
 mod writer;
 
 pub use key::{ChunkPos, Dimension};
 /// The NBT tag type of [`Column::entities`] and friends, for code that reads them.
 pub use nbt::Tag;
+pub use save::{save_columns, Saved};
+pub use wire::{pack_columns, pack_world_dir, unpack_columns, unpack_world};
 pub use writer::{SavedWorld, WorldWriter};
 
 use std::collections::BTreeMap;

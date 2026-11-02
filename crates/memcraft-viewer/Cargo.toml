@@ -44,7 +44,9 @@ png = "0.18"
 # Bevy's wasm build needs JS randomness, too.
 getrandom = { version = "0.3", features = ["wasm_js"] }
 # To notice when the browser drops the pointer lock (Esc), which Bevy doesn't report.
-web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "CssStyleDeclaration", "Document", "Element", "HtmlAnchorElement", "HtmlElement", "Location", "Node", "Url", "Window"] }
+web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "CssStyleDeclaration", "Document", "Element", "HtmlAnchorElement", "HtmlElement", "Location", "Node", "RequestInit", "Response", "Url", "Window"] }
 # To hand the zip to the browser as a download.
 js-sys = "0.3"
 wasm-bindgen = "0.2"
+# To send a save to the world server (see `server`).
+wasm-bindgen-futures = "0.4"
