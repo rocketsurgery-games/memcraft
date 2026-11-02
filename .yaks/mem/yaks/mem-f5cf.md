@@ -1,11 +1,11 @@
 ---
 id: mem-f5cf
 title: Map chunk persistence
-status: hairy
+status: shaving
 type: feature
 priority: 3
 created: '2026-10-31T23:21:32Z'
-updated: '2026-11-01T15:44:39Z'
+updated: '2026-11-02T01:15:27Z'
 ---
 
 Initially, let's just focus on a manual save affordance in the menu (I guess we'll need a menu first!). Presumably we'd need some other serving mechanism to even be _able_ to save anything. We can explore that as well, but also preserve an "ephemeral" mode for read-only deployments with no server.
@@ -57,3 +57,14 @@ delta:writer-1 on mem-a86b, thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtzhZIBxBBCaHaBp
 ▸ 2026-11-01T15:44:39Z [delta:herd]
 
 delta:menu-1 on mem-d6f2 (game menu), thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADupIZIBxBBCaHaBp8ZDPqDsZufUZIx8, base 48ed523, started Sun Nov  1 15:44:39 UTC 2026.
+
+---
+▸ 2026-11-02T01:15:27Z [save-1]
+kind: move
+from: hairy
+to: shaving
+child: mem-5219
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2xo5IBxBD-0Otq811F0oo4eGE3HRbr
+---
+
+moved: hairy -> shaving
