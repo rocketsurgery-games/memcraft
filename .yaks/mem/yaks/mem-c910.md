@@ -5,7 +5,7 @@ status: shaving
 type: task
 priority: 3
 created: '2026-11-01T01:16:34Z'
-updated: '2026-11-01T23:46:39Z'
+updated: '2026-11-02T00:07:26Z'
 parent: mem-f4c5
 depends_on:
 - mem-12d5
@@ -87,3 +87,11 @@ Decision: the editor and the menu coexist through a `controls::Modal` flag.
 Decision: a block entity is dropped when its cell's block id changes (`WorldMap::set_block`), so a broken sign loses its text and a later save has no orphan. `WorldMap::{block_entity, set_block_entity, take_edited_cells}` are the world-side API (saving reads `col.block_entities`).
 
 Heads-up for the herd: in this checkout `git status` shows `entities.rs`, `item_icons.rs`, `assets/paintings/`, the new textures, and the edits to `main.rs`/`mesh.rs`/`build.rs`/`mcpe-world/src/lib.rs` as uncommitted/untracked on top of a48f18b: the mem-15e6 commits there are empty. My signs code uses `entities::Wall`. I commit only my own files with explicit paths.
+
+---
+▸ 2026-11-02T00:07:26Z [sign-2]
+kind: checkpoint
+commit: 7696d35e8aeb23a0d5af15f68f8479a4f31cf31b
+---
+
+Checkpoint: signs.rs/font.rs/sign_editor.rs + world/controls/menu/targeting/main hooks written, 9 sign unit tests pass. Commits 20f31f2 (repair: the paint files a48f18b lacked) and 7696d35 (wip). Next: clippy native/wasm, web build, screenshots.
