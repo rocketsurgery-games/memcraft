@@ -268,7 +268,10 @@ mod tests {
         let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
         mouse.release(MouseButton::Left);
         mouse.clear();
-        mouse.press(MouseButton::Left);
+        // A frame with the cursor off the button: a click right after leaving it is
+        // taken to be a click on the button (see `grab_pointer`).
+        app.update();
+        app.world_mut().resource_mut::<ButtonInput<MouseButton>>().press(MouseButton::Left);
         app.update();
         assert!(locked(&mut app));
     }

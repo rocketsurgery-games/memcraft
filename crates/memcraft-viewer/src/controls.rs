@@ -171,17 +171,26 @@ pub fn set_locked(cursor: &mut CursorOptions, locked: bool) {
 /// browser itself (the page never sees it), so the lock is re-read from the
 /// page. The click that locks does not act on a block, whatever the system
 /// order: see [`WorldMouse`].
+///
+/// A frame sees a press with the cursor where it ended up, which can be well
+/// after the press when frames are slow (software rendering): a click on a
+/// button followed by a move off it would then lock the pointer as a click on
+/// the scene. So a press is on a button if the cursor was over one at the end
+/// of the previous frame too.
 pub fn grab_pointer(
     mouse: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Query<&Interaction, With<Button>>,
     modal: Res<Modal>,
     mut window: Single<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
+    mut over_button_before: Local<bool>,
     #[cfg(target_arch = "wasm32")] mut browser_had_lock: Local<bool>,
 ) {
     let (window, cursor) = &mut *window;
     let locked = is_locked(cursor);
-    let on_button = buttons.iter().any(|i| *i != Interaction::None);
+    let over_button = buttons.iter().any(|i| *i != Interaction::None);
+    let on_button = over_button || *over_button_before;
+    *over_button_before = over_button;
     if !locked && !modal.0 && window.focused && !on_button && mouse.just_pressed(LOCK_BUTTON) {
         set_locked(cursor, true);
     } else if locked && (keys.just_pressed(KeyCode::Escape) || !window.focused) {
@@ -296,6 +305,49 @@ pub fn walk(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A window with a free pointer, a button and `grab_pointer`.
+    fn grab_app() -> (App, Entity) {
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<Modal>()
+            .add_systems(Update, grab_pointer);
+        app.world_mut().spawn((Window { focused: true, ..default() }, CursorOptions::default(), PrimaryWindow));
+        let button = app.world_mut().spawn((Button, Interaction::None)).id();
+        (app, button)
+    }
+
+    fn frame(app: &mut App, button: Entity, over: Interaction, press: bool) {
+        *app.world_mut().get_mut::<Interaction>(button).unwrap() = over;
+        let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
+        mouse.clear();
+        if press {
+            mouse.press(LOCK_BUTTON);
+            mouse.release(LOCK_BUTTON);
+        }
+        app.update();
+    }
+
+    fn locked(app: &mut App) -> bool {
+        let mut cursors = app.world_mut().query::<&CursorOptions>();
+        is_locked(cursors.single(app.world()).unwrap())
+    }
+
+    #[test]
+    fn a_click_on_a_button_does_not_lock_even_if_the_cursor_has_moved_off_it_by_the_time_it_is_seen() {
+        let (mut app, button) = grab_app();
+        // The cursor rests on the button; the click is only seen after the cursor
+        // has left it (slow frames).
+        frame(&mut app, button, Interaction::Hovered, false);
+        frame(&mut app, button, Interaction::None, true);
+        assert!(!locked(&mut app));
+        // A click on the scene, with the cursor off the button for a frame, locks.
+        let (mut app, button) = grab_app();
+        frame(&mut app, button, Interaction::None, false);
+        frame(&mut app, button, Interaction::None, true);
+        assert!(locked(&mut app));
+    }
 
     #[test]
     fn turning_keeps_the_start_facing_and_clamps_pitch() {

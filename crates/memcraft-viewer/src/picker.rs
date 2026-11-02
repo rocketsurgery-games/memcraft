@@ -560,6 +560,8 @@ mod tests {
         for mut i in cells.iter_mut(app.world_mut()) {
             *i = Interaction::None;
         }
+        // (A frame with the cursor off the cells first: see `grab_pointer`.)
+        app.update();
         app.world_mut().resource_mut::<ButtonInput<MouseButton>>().press(MouseButton::Left);
         app.update();
         assert!(locked(&mut app));

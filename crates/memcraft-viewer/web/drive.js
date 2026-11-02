@@ -268,39 +268,48 @@ const printLogs = () => console.log(logs.filter(l => !/GL Driver|GPU stall/.test
     console.log('placed:', logs.filter(l => /\bplaced /.test(l)))
   }
   if (process.env.CHEST) {
-    // A chest has to be looked at exactly. The lock click on SCENE turned the
-    // view by the 440 px it is left of the centre (a locked pointer's motion is
-    // measured from the centre), so move back to the centre, which turns it
-    // back, before looking.
-    const CENTRE = [640, 360]
+    // A chest has to be looked at exactly: click where the pointer already is
+    // (SCENE), since a locked pointer's move to anywhere else turns the view.
+    // (This used to move to the centre to undo a turn of 440 px that the lock
+    // click made; that turn came from a click on the menu's Controls button
+    // locking the pointer by mistake, which it no longer does.)
     const edits = () => logs.filter(l => /\b(broke|placed|toggled) /.test(l)).length
     const editsBefore = edits()
-    await page.mouse.move(...CENTRE)
+    // Step marks in the log, so an edit can be told apart by what the drive had just done.
+    const mark = step => logs.push(`[drive] ${step}`)
+    mark('chest stage starts')
     await page.waitForTimeout(3000)
     await shot('chest-before.png')
-    await page.mouse.click(...CENTRE, { button: 'right' })
+    mark('right click: open the chest')
+    await page.mouse.click(...SCENE, { button: 'right' })
     await waitLock(false)
     await page.waitForTimeout(3000)
     console.log('locked with the chest open (must be null):', await locked())
     await shot('chest-open.png')
+    mark('E')
     await page.keyboard.press('e')
     await waitLock(true)
     await page.waitForTimeout(3000)
     console.log('locked after E closed the chest (must be the canvas):', await locked())
     await shot('chest-closed.png')
-    await page.mouse.click(...CENTRE, { button: 'right' })
+    mark('right click: open the chest again')
+    await page.mouse.click(...SCENE, { button: 'right' })
     await waitLock(false)
     await page.waitForTimeout(3000)
+    mark('Esc')
     await page.keyboard.press('Escape')
     await page.waitForTimeout(3000)
     console.log('locked after Esc closed the chest (must be null):', await locked())
     await shot('chest-esc.png')
     await page.mouse.move(...SCENE)
     await page.waitForTimeout(2000)
+    mark('left click on the scene: lock')
     await page.mouse.click(...SCENE, { button: 'left' })
     await waitLock(true)
     console.log('locked after the next click:', await locked())
     console.log('block edits made by the chest stage (must be 0):', edits() - editsBefore)
+    // What the stage did, with any edits in between, to find the click that made one.
+    console.log(logs.slice(logs.indexOf('[drive] chest stage starts')).filter(l => /^\[drive\]|\b(broke|placed|toggled) /.test(l)).map(l => l.replace(/%c/g, '').slice(0, 160)).join('\n'))
   }
   // Turn right, with no button held.
   for (let i = 0; i < 20; i++) { await page.mouse.move(640 + 20 * (i + 1), 360); await page.waitForTimeout(50) }
