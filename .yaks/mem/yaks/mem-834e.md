@@ -1,11 +1,11 @@
 ---
 id: mem-834e
 title: 'Containers: take and place items'
-status: shaving
+status: shorn
 type: feature
 priority: 4
 created: '2026-11-01T03:38:53Z'
-updated: '2026-11-02T09:21:05Z'
+updated: '2026-11-02T09:29:41Z'
 parent: mem-f4c5
 depends_on:
 - mem-5d8c
@@ -58,3 +58,18 @@ Decision: write-back goes through containers::set_stack: rewrites only the one s
 ▸ 2026-11-02T09:21:05Z [items-1]
 
 Summary: hotbar slots are item stacks (new items.rs: Stack, icon, name, exchange/send; item_icons.rs now has ~150 PE names; entities::held_icon uses items::icon). The container window shows the hotbar, names the hovered item, and clicks move stacks (take/swap/merge, shift-click, put, 1-9 select); every change is written via containers::set_stack -> WorldMap::set_block_entity, so save/zip/server pick it up (test: edits_survive_the_world_writer). Evidence: cargo test --workspace ok (173 viewer tests), clippy native --workspace --all-targets and wasm clean, web/build.sh builds, drive CHEST stage (CAM=90.5,77.8,110.5,270,5 CHEST=1, NODE_PATH=~/tools/drive/node_modules node crates/memcraft-viewer/web/drive.js crates/memcraft-viewer/web/dist ~/shots1) takes the eggs into hotbar slot 0, 0 block edits; screenshots attached. Commit 2328c93. Gaps: no split/right-click; tools merge to 64; moved stacks lose NBT tags; items without an icon are invisible in the hotbar; no per-container slot rules (furnace output accepts items).
+
+---
+▸ 2026-11-02T09:29:41Z [herd-memcraft]
+
+Landed as 76433fd (squash of items-1 2328c93 on top of fb63185 mobs; main.rs auto-merged). Verify: workspace tests, clippy native+wasm, web build OK; CHEST drive moved eggs into hotbar, 0 block edits.
+
+---
+▸ 2026-11-02T09:29:41Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
