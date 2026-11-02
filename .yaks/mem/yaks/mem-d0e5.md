@@ -1,11 +1,11 @@
 ---
 id: mem-d0e5
 title: 'Block picker: search and pick-block'
-status: shaving
+status: shorn
 type: task
 priority: 3
 created: '2026-11-01T01:16:13Z'
-updated: '2026-11-02T02:43:35Z'
+updated: '2026-11-02T02:52:54Z'
 parent: mem-4fcd
 depends_on:
 - mem-8d69
@@ -78,3 +78,18 @@ Checks (final tree, rebuilt after target/ was deleted): cargo test --workspace e
 Drive: NODE_PATH=~/tools/drive/node_modules CAM=119.5,67.5,15,180,35 PICKER=wool node crates/memcraft-viewer/web/drive.js crates/memcraft-viewer/web/dist ~/shots-picker1 -> lock null with picker open; 'picked Orange Wool for slot 1'; null after Esc; locked after next click; 'placed (35, 1) at [119, 65, 11]'; middle click 'picked Orange Wool (35:1) from [119, 65, 11]'; block edits logged (must be 1): 1. Screenshots attached (picker-open/search/hover/picked/placed/pickblock). Drive was run on the pre-final-commit dist; the last commit only moved test-only cfg and edited docs/drive comments.
 Merge note: main is now c8d53fa; git merge-tree shows conflicts only in main.rs (mod list: picker vs toast / save cfg; add_plugins tuple needs both PickerPlugin and ToastPlugin) and web/drive.js (header comment, edit-count expression: PICKER ? 1 as well as LEVER/SAVE). menu.rs auto-merges.
 Known gaps: picker fills only the selected slot (change slot: Esc, click, 1-9, B); Esc leaves menu until a click; pick-block doesn't jump to an existing slot; blocks without catalog entry pick nothing; tooltip has no edge clamping; no keyboard grid navigation.
+
+---
+▸ 2026-11-02T02:52:54Z [herd-memcraft]
+
+Landed 0c5f2b8 on main (picker-1's 9b0868b squash-merged via git; main.rs plugin list and drive.js SAVE/PICKER stages resolved by keeping both). Herd re-ran on main: 121 viewer tests, clippy native+wasm clean, web/build.sh OK; drive CAM=119.5,67.5,15,180,35 PICKER=wool: picker-search shows the 16 wools, 'picked Orange Wool for slot 1', 'placed (35, 1) at [119, 65, 11]', middle click 'picked Orange Wool (35:1) from [119, 65, 11]', edits 1/1, pointer lock null while open.
+
+---
+▸ 2026-11-02T02:52:54Z [herd-memcraft]
+kind: move
+from: shaving
+to: shorn
+thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
+---
+
+moved: shaving -> shorn
