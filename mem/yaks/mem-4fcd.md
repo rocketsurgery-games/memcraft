@@ -10,11 +10,9 @@ updated: '2026-11-02T04:24:52Z'
 
 We're not trying to reimplement minecraft game logic, just extend this viewer to allow for a simple creative-mode playground. To that end, we need the ability to remove and place blocks. Which also implies the ability to pick the current block. The most natural solution to this is to implement a very basic Minecraft-style toolbar, and a basic block/object search UI.
 
----
-▸ 2026-11-01T01:17:10Z [herd]
-kind: ask
-needs: human
----
+#### 2026-11-01T01:17:10Z
+
+*herd · kind: ask · needs: human*
 
 asked: needs human
 
@@ -26,30 +24,27 @@ Breakdown is in the child yaks; I'm doing the editable-world foundation (`mem-56
 4. **Creative rules.** Instant break, no drops, unlimited blocks, any catalog block placeable, reach about 6 blocks walking and farther flying. Lean: yes.
 5. **Orientation.** Logs, stairs, slabs, torches, doors placed by facing are a separate yak (`mem-b3b2`, p4), so first-pass placement uses the catalog's data value as-is. Lean: fine for a first pass.
 
----
-▸ 2026-11-01T01:17:35Z [herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T01:17:35Z
+
+*herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T01:18:11Z [herd]
+#### 2026-11-01T01:18:11Z
+
+*herd*
 
 Worker `cat-1` on `mem-8d69`: thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADonT5IBxBArrcX3fBVIrK_YnmSnEPGN, default worker model, base `1277a16`.
 
----
-▸ 2026-11-01T01:30:55Z [herd]
+#### 2026-11-01T01:30:55Z
+
+*herd*
 
 Worker `cat-1` died: its subthread hit the model spending limit ("Token-based spending limit reached"). It left an uncommitted 408-line `catalog.rs` draft in its worktree; the yakherd will review and finish it.
 
----
-▸ 2026-11-01T01:46:10Z [Joel Webber]
-kind: answer
-needs: agent
----
+#### 2026-11-01T01:46:10Z
+
+*Joel Webber · kind: answer · needs: agent*
 
 1. Let's not use scroll wheel for item selection. That sucks on touch pads. 1-9 is fine.
 2. Fine to go with those. Pretty standard minecraft controls.
@@ -57,13 +52,15 @@ needs: agent
 4. Exactly.
 5. Works for me!
 
----
-▸ 2026-11-01T01:59:31Z [herd]
+#### 2026-11-01T01:59:31Z
+
+*herd*
 
 Workers: `tgt-1` on `mem-6934`, `hot-1` on `mem-f4f7`; `shape-1` on `mem-12d5` (under `mem-f4c5`). All Delta subthreads, default worker model, base `8fc3164`.
 
----
-▸ 2026-11-01T02:00:57Z [herd]
+#### 2026-11-01T02:00:57Z
+
+*herd*
 
 Worker threads (base `8fc3164`, default worker model):
 
@@ -71,29 +68,26 @@ Worker threads (base `8fc3164`, default worker model):
 - `tgt-1` (`mem-6934`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpSnpIBxBArrcX3fBVIrK_YnmSnEPGN
 - `hot-1` (`mem-f4f7`): ksQQOn_lPggNQrKkBKNvXOzaN5LOADpWzZIBxBArrcX3fBVIrK_YnmSnEPGN
 
----
-▸ 2026-11-01T15:21:36Z [herd]
-kind: pickup
----
+#### 2026-11-01T15:21:36Z
+
+*herd · kind: pickup*
 
 picked up
 
----
-▸ 2026-11-01T15:21:48Z [herd]
+#### 2026-11-01T15:21:48Z
+
+*herd*
 
 Answers recorded (herd): hotbar stays on 1-9, no scroll-wheel selection (touchpads); left break / right place / middle pick-block; Bevy UI only; creative rules as proposed; orientation stays in mem-b3b2. Unblocks mem-d0e5 picker and mem-d6f2 menu.
 
----
-▸ 2026-11-02T04:24:52Z [herd-memcraft]
+#### 2026-11-02T04:24:52Z
+
+*herd-memcraft*
 
 All children shorn (56d9, 6934, 8d69, b3b2, d0e5, f4f7); basic placement and removal is complete on main da60fd3. Follow-ups noted on mem-b3b2.
 
----
-▸ 2026-11-02T04:24:52Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T04:24:52Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

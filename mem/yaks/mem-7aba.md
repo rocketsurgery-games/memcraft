@@ -10,13 +10,15 @@ updated: '2026-10-29T18:33:55Z'
 
 And make sure they get rendered. Let's find something as close as we can to the originals, while still being freely distributable.
 
----
-▸ 2026-10-29T17:19:38Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:19:38Z
+
+*delta:Set up remote yak workflow*
 
 moved: hairy -> shaving
 
----
-▸ 2026-10-29T17:19:38Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:19:38Z
+
+*delta:Set up remote yak workflow*
 
 Claim (yakherd: this thread). Owner: worker `tex-1`.
 
@@ -25,13 +27,15 @@ Claim (yakherd: this thread). Owner: worker `tex-1`.
 - Evidence: license text of the chosen pack recorded; headless browser screenshots before/after from the same viewpoint; tests still pass; wasm size before/after.
 - The pack choice is a design fork: worker records candidates and asks, but prototypes with its lean meanwhile.
 
----
-▸ 2026-10-29T17:21:52Z [tex-1]
+#### 2026-10-29T17:21:52Z
+
+*tex-1*
 
 Start: 2026-10-29T17:21:48Z (date -u). Worker tex-1. yaks path: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-7aba.md
 
----
-▸ 2026-10-29T17:25:46Z [tex-1]
+#### 2026-10-29T17:25:46Z
+
+*tex-1*
 
 Decision: texture pack = Pixel Perfection (XSSheep, CC BY-SA 4.0), taken from the community-maintained MC-format fork "Pixel Perfection CE" (github.com/Athemis/PixelPerfectionCE @ 28e38cab, LICENSE.md = full CC BY-SA 4.0 legal code; README: "Originally envisioned and created by XSSheep"). Rejected / alternatives surveyed (license text read):
 
@@ -53,8 +57,9 @@ Licence note for the human: the texture atlas is an adaptation of CC BY-SA 4.0 a
 
 Lean: Pixel Perfection via CE fork. Prototyping with it now; the code only depends on a name->tile list, so swapping packs is replacing PNGs in assets/textures/.
 
----
-▸ 2026-10-29T17:25:46Z [tex-1]
+#### 2026-10-29T17:25:46Z
+
+*tex-1*
 
 asked: needs human
 
@@ -68,50 +73,58 @@ Questions: (1) OK to use Pixel Perfection? Alternatives that are free: VoxeLibre
 
 I am proceeding with the lean in the meantime.
 
----
-▸ 2026-10-29T17:38:23Z [tex-1]
+#### 2026-10-29T17:38:23Z
+
+*tex-1*
 
 Incident: for the first ~40 min I ran `cd ~/memcraft` and edited/staged files in /home/user/memcraft (the yakherd's checkout) instead of my own clone /home/user/memcraft-3. Yakherd noticed; I moved the work via `git diff --cached --binary > ~/logs/tex-1.patch` + `git apply --index` in /home/user/memcraft-3 (296 files staged there, matches). Side effects left in /home/user/memcraft: staged changes (Cargo.lock, viewer Cargo.toml/build.rs/src/assets), a ref refs/wip/tex-1 (from `git stash create`), build artefacts under target/ and crates/memcraft-viewer/web/dist (gitignored), a killed in-flight wasm build. I did not reset or clean anything there. From now on I only use /home/user/memcraft-3.
 
----
-▸ 2026-10-29T17:56:36Z [Joel Webber]
+#### 2026-10-29T17:56:36Z
+
+*Joel Webber*
 
 That's all fine with me. Let's just get something going for now, and we can clean up later if needed.
 
----
-▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:19:17Z
+
+*delta:Set up remote yak workflow*
 
 picked up
 
 ![before-flat-colours](mem-7aba/before-flat-colours.png)
 
----
-▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:19:17Z
+
+*delta:Set up remote yak workflow*
 
 Before: flat vertex colours (main 311a5a2)
 
 ![after-start](mem-7aba/after-start.png)
 
----
-▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:19:17Z
+
+*delta:Set up remote yak workflow*
 
 After: textured atlas, headless Chromium (SwiftShader)
 
 ![after-turned](mem-7aba/after-turned.png)
 
----
-▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:19:17Z
+
+*delta:Set up remote yak workflow*
 
 Landed (work by tex-1, finished/verified by yakherd). Pack: Pixel Perfection by XSSheep, CC BY-SA 4.0 (Joel approved); license + ATTRIBUTION in crates/memcraft-viewer/assets. build.rs bakes a 16px atlas (biome tints baked in); per-face tiles; opaque/cutout(mask 0.5)/blend passes; leaves don't cull neighbours. Evidence: cargo test --workspace pass; clippy native + wasm32 clean; wasm 22.25->22.54 MB; drive.js on local dist: pointer lock states correct, 294,689->332,961 quads, screenshots attached.
 
----
-▸ 2026-10-29T18:19:17Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:19:17Z
+
+*delta:Set up remote yak workflow*
 
 moved: shaving -> shorn
 
 ![after-tint](mem-7aba/after-tint.png)
 
----
-▸ 2026-10-29T18:33:55Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:33:55Z
+
+*delta:Set up remote yak workflow*
 
 Follow-up: brighter grass/foliage tints (tex-1), landed; tests pass, clippy clean, live site verified textured.

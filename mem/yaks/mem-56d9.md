@@ -26,22 +26,21 @@ Foundation for every editing, interaction and save feature. Today `setup` in `cr
 
 Done by the yakherd as a prep commit, since every other yak in this family builds on its types.
 
----
-▸ 2026-11-01T01:18:11Z [herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T01:18:11Z
+
+*herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T01:18:11Z [herd]
+#### 2026-11-01T01:18:11Z
+
+*herd*
 
 Claim: yakherd (`herd`), prep commit in the yakherd checkout. Scope: `main.rs` setup/meshing, a new `world.rs` resource, `physics.rs` `Solids` setter, `mesh.rs` only if its signature must change. Evidence: unit test, native + wasm build, drive.js quad count.
 
----
-▸ 2026-11-01T01:58:51Z [herd]
+#### 2026-11-01T01:58:51Z
+
+*herd*
 
 Landed as `4e25883` (pushed to origin/main).
 
@@ -58,11 +57,8 @@ Evidence:
 - Web build + drive.js: `meshed 256 columns, 332961 quads in 1498.3 ms` (same quad count as before; ~6 ms per column in headless SwiftShader); pointer lock lock/release/relock correct.
 - A first browser run caught `std::time::Instant` panicking on wasm; fixed with `bevy::platform::time::Instant`.
 
----
-▸ 2026-11-01T01:58:51Z [herd]
-kind: move
-from: shaving
-to: shorn
----
+#### 2026-11-01T01:58:51Z
+
+*herd · kind: move · from: shaving · to: shorn*
 
 moved: shaving -> shorn

@@ -15,18 +15,15 @@ A small server that serves the web build and one world, and accepts saves from t
 
 Shape depends on the open question on the parent yak.
 
----
-▸ 2026-11-02T04:35:37Z [server-1]
-kind: move
-from: hairy
-to: shaving
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD5zeJIBxBD-0Otq811F0oo4eGE3HRbr
----
+#### 2026-11-02T04:35:37Z
+
+*server-1 · kind: move · from: hairy · to: shaving · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD5zeJIBxBD-0Otq811F0oo4eGE3HRbr*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-02T04:37:48Z [server-1]
+#### 2026-11-02T04:37:48Z
+
+*server-1*
 
 server-1 on mem-a1f7, base af1c65a.
 
@@ -38,19 +35,15 @@ Decision: shared save code (backup_db, utc_stamp, 'put columns over a dir with b
 
 Decision: the page probes and fetches the world in index.html JS before init() (async fetch inside a wasm-bindgen-futures task would be fatal: winit's control-flow exception thrown inside a task stalls the task queue); the viewer reads it from window and POSTs saves from Rust via web-sys fetch.
 
----
-▸ 2026-11-02T04:40:15Z [server-1]
-kind: checkpoint
-commit: baf056f0ba36fcf4effbeb7367b8a9df4a578e11
----
+#### 2026-11-02T04:40:15Z
+
+*server-1 · kind: checkpoint · commit: baf056f0ba36fcf4effbeb7367b8a9df4a578e11*
 
 checkpoint: mcpe-world has wire (pack/unpack world and columns) + save_columns (backup, moved from viewer); crates/memcraft-server done with 7 passing tests (probe, round trip with backup, bad body, stale viewers, static). Next: viewer wasm side, drive, README.
 
----
-▸ 2026-11-02T05:01:13Z [server-1]
-kind: checkpoint
-commit: e2c0f5b8af475409b2a61ebcdbc7f0796a6f9bc0
----
+#### 2026-11-02T05:01:13Z
+
+*server-1 · kind: checkpoint · commit: e2c0f5b8af475409b2a61ebcdbc7f0796a6f9bc0*
 
 checkpoint: viewer side (server.rs, index.html probe, drive HOSTED) done; cargo test --workspace and clippy native + wasm clean. Next: web/build.sh and the Playwright drive against the server.
 
@@ -62,11 +55,9 @@ checkpoint: viewer side (server.rs, index.html probe, drive HOSTED) done; cargo 
 
 ![hosted-before-start](mem-a1f7/hosted-before-start.png)
 
----
-▸ 2026-11-02T05:21:14Z [server-1]
-kind: summary
-commit: 653a997a85f211b2234c4752c02935668577d773
----
+#### 2026-11-02T05:21:14Z
+
+*server-1 · kind: summary · commit: 653a997a85f211b2234c4752c02935668577d773*
 
 Summary: crates/memcraft-server (axum, tower-http ServeDir) serves web dist + one world dir. GET /api/world probe, GET /api/world/files (packed), PUT /api/world/columns (edited columns only, packed as their LevelDB records; server re-reads dir, puts columns over it, backup db.backup-<time>). Shared code moved into mcpe-world: save_columns/backup/utc_stamp (native save now calls it), WorldWriter::put_columns, wire pack/unpack of worlds and columns. Viewer: index.html probes before init() and stashes files in window.memcraftServer; server.rs (wasm) loads that world, label 'Save to server', one PUT in flight, edits marked saved on send and re-marked on failure. Pages unchanged (no server -> embedded world + zip).
 
@@ -74,17 +65,14 @@ Evidence: cargo test --workspace PASS (server: 7 tests, mcpe-world wire/save tes
 
 Gaps: no auth; last save of a column wins and viewers don't see each other's edits until reload; saved worlds' lighting not recomputed (as native); wasm viewer path (server.rs) only covered by the drive, not unit tests; the drive's HOSTED run saw one column only; debug server binary used (no release build).
 
----
-▸ 2026-11-02T06:01:38Z [herd-memcraft]
+#### 2026-11-02T06:01:38Z
+
+*herd-memcraft*
 
 Landed c184b91 on main (server-1's 653a997 squash-merged, fast-forward). Herd re-ran on main: workspace tests (16 suites ok incl. memcraft-server's 7), clippy native+wasm clean, web/build.sh OK; plain drive against static dist shows the api/world probe 404s and the embedded world loads (Pages path unchanged). Hosted drive evidence from server-1 (save to server, reload shows edit, backup dir) not re-run by herd.
 
----
-▸ 2026-11-02T06:01:38Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T06:01:38Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

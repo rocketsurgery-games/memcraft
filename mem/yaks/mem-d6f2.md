@@ -21,10 +21,9 @@ A pause menu, the home for Save and later settings.
 
 drive.js: Esc shows the menu (screenshot), Resume relocks (pointer-lock state logged).
 
----
-▸ 2026-11-01T15:44:11Z [delta:herd]
-kind: claim
----
+#### 2026-11-01T15:44:11Z
+
+*delta:herd · kind: claim*
 
 Claim (delta:herd) for worker `delta:menu-1`. Bevy UI only (Joel, mem-4fcd answer 3).
 
@@ -43,32 +42,33 @@ Evidence:
 - `cargo test --workspace`, clippy native and wasm, `sh crates/memcraft-viewer/web/build.sh`.
 - Headless screenshots: menu visible before locking; hidden after clicking Resume (pointer locked); visible again after `document.exitPointerLock()`; record that the resume click made no edit.
 
----
-▸ 2026-11-01T15:44:11Z [delta:herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T15:44:11Z
+
+*delta:herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T15:44:51Z [delta:menu-1]
+#### 2026-11-01T15:44:51Z
+
+*delta:menu-1*
 
 Start Sun Nov  1 15:44:50 UTC 2026; checkout /home/user/memcraft-5 (git toplevel), base 48ed523
 
----
-▸ 2026-11-01T15:46:57Z [delta:menu-1]
+#### 2026-11-01T15:46:57Z
+
+*delta:menu-1*
 
 Progress: menu.rs written (Bevy UI overlay open whenever pointer unlocked; Resume/Save(disabled, SaveAvailable+SaveRequested hook)/Controls), controls.rs gates keys with pointer_locked and grab_pointer ignores clicks on UI, hotbar gated, HUD help text moved into menu, README updated. Next: tests, clippy, web build, drive.
 
----
-▸ 2026-11-01T22:09:39Z [herd-memcraft]
+#### 2026-11-01T22:09:39Z
+
+*herd-memcraft*
 
 menu-1 lost with the runner before completing. Respawning as menu-2 from main 0a53ca6.
 
----
-▸ 2026-11-01T22:14:51Z [menu-2]
+#### 2026-11-01T22:14:51Z
+
+*menu-2*
 
 menu-2 start: checkout /home/user/memcraft-3, base 0a53ca6, wip commit 6762cae (menu.rs, pointer_locked gating in controls/hotbar, drive.js menu steps, README). Next: tests, clippy, web build, drive run.
 
@@ -82,8 +82,9 @@ menu-2 start: checkout /home/user/memcraft-3, base 0a53ca6, wip commit 6762cae (
 
 [menu2-drive](mem-d6f2/menu2-drive.log)
 
----
-▸ 2026-11-01T23:05:13Z [menu-2]
+#### 2026-11-01T23:05:13Z
+
+*menu-2*
 
 Decision: buttons are detected through `Interaction` on `Button` inside `grab_pointer` (ignores the LOCK click while any button is hovered/pressed), not UI picking or backdrop observers: one rule, same on native and web.
 Decision: no Esc-to-close. Browsers don't deliver Esc while the pointer is locked and can't relock from an Esc keydown; Resume or a scene click closes the menu. Uniform native/web.
@@ -94,17 +95,14 @@ Done: commit d128447 on main (local, not pushed; wip commits 6762cae ab491a5 a1a
 Checks: cargo test --workspace all ok (viewer 66 passed); cargo clippy --workspace --all-targets and clippy -p memcraft-viewer --target wasm32-unknown-unknown: 0 warnings. web/build.sh ok. Playwright drive.js (TMPDIR=/tmp): locked before click null; after Controls click null; after left click memcraft; after exitPointerLock null; after Resume memcraft; block edits logged 0. Screenshots attached.
 Gaps: no Esc-to-close; Save is only a hook; drive.js button coordinates assume 1280x720 and the 200 px offset; Resume click relies on edit_blocks running before grab_pointer. Not shorn: herd shears.
 
----
-▸ 2026-11-01T23:21:21Z [herd-memcraft]
+#### 2026-11-01T23:21:21Z
+
+*herd-memcraft*
 
 Landed 1569374 on main (menu-2's d128447 squashed with its wip commits). Herd re-ran on main: cargo test --workspace (66 viewer tests), clippy native+wasm clean, web/build.sh OK. Gaps: no Esc-to-close (browser limitation), Save is a hook only (mem-5219), drive.js coords assume 1280x720.
 
----
-▸ 2026-11-01T23:21:21Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-01T23:21:21Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

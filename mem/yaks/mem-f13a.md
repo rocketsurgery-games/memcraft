@@ -12,13 +12,15 @@ This is a decent sized chunk of work, and the first crack at collision detection
 
 If one of the bevy physics crates can be used largely OOTB, without being obscenely expensive, perhaps that would be better than playing "physics whack-a-mole" with a more hand-crafted solution.
 
----
-▸ 2026-10-29T17:19:38Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:19:38Z
+
+*delta:Set up remote yak workflow*
 
 moved: hairy -> shaving
 
----
-▸ 2026-10-29T17:19:38Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:19:38Z
+
+*delta:Set up remote yak workflow*
 
 Claim (yakherd: this thread). Owner: worker `walk-1`.
 
@@ -27,16 +29,18 @@ Claim (yakherd: this thread). Owner: worker `walk-1`.
 - Evidence: unit tests for collision (falling onto ground, not walking through a wall, stepping/jumping up one block), headless browser run showing the player standing on terrain and walking, wasm size before/after.
 - Judge: the yakherd at landing. The physics-crate-vs-hand-rolled choice is a `Decision:` note with numbers.
 
----
-▸ 2026-10-29T17:22:17Z [walk-1]
+#### 2026-10-29T17:22:17Z
+
+*walk-1*
 
 Started: 2026-10-29T17:20Z (`date -u`, walk-1).
 `yaks path mem-f13a`: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-f13a.md
 
 Plan: (1) measure physics-crate cost vs hand-rolled (baseline wasm size/build time first), (2) Decision note, (3) implement in new `physics.rs` + `controls.rs`, tests, browser run.
 
----
-▸ 2026-10-29T17:54:52Z [walk-1]
+#### 2026-10-29T17:54:52Z
+
+*walk-1*
 
 Decision: hand-rolled Minecraft-style AABB-vs-voxel sweep, not a physics crate. Rejected: avian3d 0.7.0 (spiked), bevy_rapier3d 0.36.0 (not built; same shape of problem). Real numbers (17:3x-17:5x Z, this 8-core runner, wasm-release profile, same Bevy 0.19.1):
 
@@ -51,8 +55,9 @@ Decision: hand-rolled Minecraft-style AABB-vs-voxel sweep, not a physics crate. 
 
 ![3-walk-moved](mem-f13a/3-walk-moved.png)
 
----
-▸ 2026-10-29T18:35:15Z [walk-1]
+#### 2026-10-29T18:35:15Z
+
+*walk-1*
 
 Decision: fly stays the default; F toggles fly/walk (on-screen hint and README updated). Rejected: starting in walk mode (the start view is 4 blocks up and 8 back from the saved player, so it would drop the camera on load); Tab/double-tap-Space as toggle (F is one key, no timing logic).
 
@@ -68,8 +73,9 @@ Decision: frames are simulated in <=1/60 s substeps and a frame longer than 0.1 
 
 Decision: toggling into walk while inside terrain lifts the player in 0.25 steps to the first free spot above; if there is none (e.g. inside an unloaded column) the toggle is refused and the player keeps flying. Rejected: letting you walk while embedded (stuck forever) and always refusing (surprising when flying through a hill). Scroll still scales speed in both modes (`scroll_speed` split out of `fly`); rejected: fly-only, since the hint says "scroll: speed" without a mode.
 
----
-▸ 2026-10-29T18:35:15Z [walk-1]
+#### 2026-10-29T18:35:15Z
+
+*walk-1*
 
 Evidence (walk-1, 2026-10-29 ~18:35Z):
 - Shape: new `physics.rs` (`Solids` voxel grid, `Aabb`, `Body::step`: Y then X then Z sweep, step-up, jump); `controls.rs`: `Mode {Fly, Walk}`, `Controller` gets mode/body/walk+sprint speed, systems `toggle_mode`, `scroll_speed`, `fly` (now mode-gated), `walk`; `main.rs`: `mod physics`, `Solids` inserted in setup, hint line, doc comment; README controls line. Pointer-lock code untouched. No Cargo changes. `blocks.rs`/`mesh.rs` untouched.
@@ -79,19 +85,22 @@ Evidence (walk-1, 2026-10-29 ~18:35Z):
 - Headless browser (SwiftShader; script at ~/base/drive-walk.js on the runner, a copy of web/drive.js with F toggles that read position from an info! log line): fly start eye (45.2,71.0,240.7); F -> falls and lands at eye y=59.6 (feet 57.98, i.e. standing on a surface 58); holding W alone moves 1.4 blocks then is stopped by a one-block ledge (45.2,59.6,240.7 -> 44.7,59.6,239.3); holding W+Space climbs the terraces to (44.4, 63.6, 230.3). Screenshots attached: 2-walk-landed.png (standing on dirt terraces looking at the horizon), 3-walk-moved.png (after hopping up a sand/stone staircase).
 - Note: headless frames take seconds, and a frame simulates at most 0.1 s, so walks are slow-motion in the screenshots run (small viewport used while walking).
 
----
-▸ 2026-10-29T18:35:24Z [walk-1]
+#### 2026-10-29T18:35:24Z
+
+*walk-1*
 
 Correction: 14 new physics tests (not 13); 18 viewer tests total... see log: 17 in the viewer crate incl. 1 controls + mesh/blocks ones. Commit aa4b60d.
 
----
-▸ 2026-10-29T18:35:24Z [walk-1]
+#### 2026-10-29T18:35:24Z
+
+*walk-1*
 
 moved: shaving -> shorn
 
 ![landed-textured-walk](mem-f13a/landed-textured-walk.png)
 
----
-▸ 2026-10-29T18:42:04Z [delta:Web Deploy v0]
+#### 2026-10-29T18:42:04Z
+
+*delta:Web Deploy v0*
 
 Landed on origin/main as ae787b0 (cherry-picked onto the texture work; README conflict merged). Re-verified there: cargo test --workspace pass (viewer 17), clippy -D warnings native + wasm clean, wasm 22.56 MB, drive.js pointer lock lock/release/relock correct, F->walk + W/Space screenshot attached.

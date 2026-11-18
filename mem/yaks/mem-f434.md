@@ -17,8 +17,9 @@ Publish the browser build of `memcraft-viewer` (world embedded in the wasm) on G
 - Size: 26 MB wasm, 7.6 MB gzipped (Pages serves gzip). Consider `wasm-opt -Oz` in CI, since `build.sh` already runs it when present.
 - Verify by loading the Pages URL in a browser and flying around.
 
----
-▸ 2026-10-29T16:55:47Z [delta:Set up remote yak workflow]
+#### 2026-10-29T16:55:47Z
+
+*delta:Set up remote yak workflow*
 
 asked: needs human
 
@@ -32,13 +33,15 @@ Options:
 
 Lean: whichever of 1/2 you prefer; I'll write the workflow (`.github/workflows/pages.yml`, build with `web/build.sh` + `wasm-opt -Oz`) so it works for both, and not flip any repo settings myself. Which one?
 
----
-▸ 2026-10-29T17:20:37Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:20:37Z
+
+*delta:Set up remote yak workflow*
 
 moved: hairy -> shaving
 
----
-▸ 2026-10-29T17:21:06Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:21:06Z
+
+*delta:Set up remote yak workflow*
 
 Workflow written, not yet run: [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) (local commit, not pushed).
 
@@ -48,20 +51,23 @@ Workflow written, not yet run: [`.github/workflows/pages.yml`](../.github/workfl
 
 Still waiting on the ask; after that the remaining step is to land, push, and load the Pages URL.
 
----
-▸ 2026-10-29T17:38:46Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:38:46Z
+
+*delta:Set up remote yak workflow*
 
 Yakherd recording Joel's answer from the Delta thread: "Ah, no worries. Just made it public." (option 1). He also said to push to origin/main freely.
 
----
-▸ 2026-10-29T17:38:46Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:38:46Z
+
+*delta:Set up remote yak workflow*
 
 picked up
 
 Enabling Pages (build_type=workflow) via the API and running the workflow.
 
----
-▸ 2026-10-29T17:39:16Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:39:16Z
+
+*delta:Set up remote yak workflow*
 
 Pushed to `origin/main` (`eb3babe..e5dbb17`), including the workflow. Enabling Pages through the API failed: `POST /repos/.../pages` returned `403 Resource not accessible by integration` (the agent token lacks that permission).
 
@@ -69,13 +75,15 @@ Needs Joel: Settings → Pages → Source: **GitHub Actions**. Then re-run the `
 
 Run `40923328146` (manual dispatch) is building now; the duplicate push run was cancelled.
 
----
-▸ 2026-10-29T17:48:39Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:48:39Z
+
+*delta:Set up remote yak workflow*
 
 CI run `40923328146`: **build passed** (7m42s; wasm built, `wasm-opt` ran, artifact uploaded). **deploy failed** as expected while Pages is not enabled. One click in Settings → Pages (Source: GitHub Actions) and a re-run should publish it.
 
----
-▸ 2026-10-29T18:09:46Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:09:46Z
+
+*delta:Set up remote yak workflow*
 
 **Hosted:** <https://rocketsurgery-games.github.io/memcraft/>
 
@@ -102,7 +110,8 @@ Not checked: a real GPU browser (only SwiftShader here). The one 404 in the cons
 
 ![pages-start](mem-f434/pages-start.png)
 
----
-▸ 2026-10-29T18:09:46Z [delta:Set up remote yak workflow]
+#### 2026-10-29T18:09:46Z
+
+*delta:Set up remote yak workflow*
 
 moved: shaving -> shorn

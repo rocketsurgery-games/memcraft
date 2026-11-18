@@ -16,8 +16,9 @@ Some starting points (I'm sure we need more than this):
 
 Let's start this yak by enumerating all the myriad other cases I'm not thinking of.
 
----
-▸ 2026-11-01T01:17:10Z [herd]
+#### 2026-11-01T01:17:10Z
+
+*herd*
 
 Enumeration of interactions, grouped by what they need. Child yaks exist for the ones marked **(yak)**.
 
@@ -55,11 +56,9 @@ Enumeration of interactions, grouped by what they need. Child yaks exist for the
 
 - Redstone propagation, liquid flow, falling sand/gravel, plant growth, mob AI, day/night.
 
----
-▸ 2026-11-01T01:17:10Z [herd]
-kind: ask
-needs: human
----
+#### 2026-11-01T01:17:10Z
+
+*herd · kind: ask · needs: human*
 
 asked: needs human
 
@@ -70,44 +69,41 @@ Which of the enumerated interactions belong in the first pass?
 3. **Entities.** Render paintings, item frames and mobs as a separate yak now (static, no AI)? Lean: yes, paintings and item frames first; mobs as simple boxes or skipped.
 4. **Simulation** (redstone, liquids, falling blocks, growth): confirm out of scope. Lean: out.
 
----
-▸ 2026-11-01T01:24:04Z [Joel Webber]
-kind: answer
-needs: agent
----
+#### 2026-11-01T01:24:04Z
+
+*Joel Webber · kind: answer · needs: agent*
 
 1. Sounds good. Let's file yaks for any we don't choose to do out of the gate.
 2. View-only is fine to start.
 3. :thumbs-up:
 4. Yeah, out of scope. We can file a low-pri yak just to track the ideas.
 
----
-▸ 2026-11-01T01:59:30Z [herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T01:59:30Z
+
+*herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T03:38:20Z [delta:Web Deploy v0]
-kind: pickup
----
+#### 2026-11-01T03:38:20Z
+
+*delta:Web Deploy v0 · kind: pickup*
 
 picked up
 
----
-▸ 2026-11-01T03:39:06Z [herd]
+#### 2026-11-01T03:39:06Z
+
+*herd*
 
 Joel's answers recorded (01:24Z). Filed: mem-6ad1 levers/buttons, mem-15e6 paintings+item frames, mem-e242 mobs as boxes (p4), mem-834e container item moves (p4), mem-622a other toggles (p4 tracking), mem-5543 simulation ideas (p5). mem-5d8c narrowed to view-only.
 
----
-▸ 2026-11-01T03:41:18Z [herd]
+#### 2026-11-01T03:41:18Z
+
+*herd*
 
 Batch 3 workers started Sun Nov  1 03:41:18 UTC 2026: door-1 mem-1457 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADr-PJIBxBArrcX3fBVIrK_YnmSnEPGN; paint-1 mem-15e6 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADsAVJIBxBArrcX3fBVIrK_YnmSnEPGN; sign-1 mem-c910 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADsEcpIBxBArrcX3fBVIrK_YnmSnEPGN.
 
----
-▸ 2026-11-01T15:33:27Z [delta:herd]
+#### 2026-11-01T15:33:27Z
+
+*delta:herd*
 
 Respawned Sun Nov  1 15:33:27 UTC 2026 after wipe, base 48ed523: delta:door-2 mem-1457 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtvLZIBxBBCaHaBp8ZDPqDsZufUZIx8; delta:paint-2 mem-15e6 thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtwqJIBxBBCaHaBp8ZDPqDsZufUZIx8. mem-c910 (signs) waits for door-2 to land so it reuses the interaction rule.

@@ -11,13 +11,15 @@ depends_on:
 - mem-0d8e
 ---
 
----
-▸ 2026-10-29T01:45:30Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T01:45:30Z
+
+*delta:Start investigation for yak mem-0908*
 
 moved: hairy -> shaving
 
----
-▸ 2026-10-29T01:59:02Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T01:59:02Z
+
+*delta:Start investigation for yak mem-0908*
 
 Converter landed in `632d2ff` (local `main`).
 
@@ -40,7 +42,8 @@ Output: 256 chunks and 89 block entities in about 0.2 s, giving a 633 KB zip.
 
 Next: mem-ef1e, loading it in the actual browser client.
 
----
-▸ 2026-10-29T01:59:03Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T01:59:03Z
+
+*delta:Start investigation for yak mem-0908*
 
 moved: shaving -> shorn

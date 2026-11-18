@@ -24,31 +24,27 @@ Choose any catalog block for the hotbar.
 
 drive.js: open the picker, type a search, screenshot the filtered grid; select one, place it.
 
----
-▸ 2026-11-02T01:15:13Z [picker-1]
-kind: move
-from: hairy
-to: shaving
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2wYpIBxBD-0Otq811F0oo4eGE3HRbr
----
+#### 2026-11-02T01:15:13Z
+
+*picker-1 · kind: move · from: hairy · to: shaving · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2wYpIBxBD-0Otq811F0oo4eGE3HRbr*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-02T01:15:13Z [picker-1]
+#### 2026-11-02T01:15:13Z
+
+*picker-1*
 
 Decision: picker key is B, not E (E is already fly-up with Q). Herd decision.
 
----
-▸ 2026-11-02T01:15:17Z [picker-1]
+#### 2026-11-02T01:15:17Z
+
+*picker-1*
 
 Started Mon Nov  2 01:15:17 UTC 2026. Checkout: /home/user/memcraft-7. Farm: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-d0e5.md. Base a354d0d.
 
----
-▸ 2026-11-02T01:31:56Z [picker-1]
-kind: checkpoint
-commit: 3bc0e656599d1f59f119fa399cf7677e0b05d201
----
+#### 2026-11-02T01:31:56Z
+
+*picker-1 · kind: checkpoint · commit: 3bc0e656599d1f59f119fa399cf7677e0b05d201*
 
 Checkpoint: picker.rs (Bevy UI panel, search, grid, hover tooltip, scroll), middle-click pick-block in targeting.rs, catalog::find/nearest, hotbar tweaks, drive.js PICKER stage written. Unit tests passing being re-run; browser drive evidence still to do.
 
@@ -70,8 +66,9 @@ Decision: pick-block maps the world block to its catalog entry (`catalog::neares
 
 ![picker-pickblock](mem-d0e5/picker-pickblock.png)
 
----
-▸ 2026-11-02T02:43:35Z [picker-1]
+#### 2026-11-02T02:43:35Z
+
+*picker-1*
 
 Finished 2026-11-02 02:44 UTC. Commit 9b0868b on top of a354d0d: block picker (B) with search + middle-click pick-block.
 Checks (final tree, rebuilt after target/ was deleted): cargo test --workspace exit 0 (viewer 115 passed, others ok); cargo clippy --workspace --all-targets exit 0, no warnings; cargo clippy -p memcraft-viewer --target wasm32-unknown-unknown exit 0; sh crates/memcraft-viewer/web/build.sh exit 0.
@@ -79,17 +76,14 @@ Drive: NODE_PATH=~/tools/drive/node_modules CAM=119.5,67.5,15,180,35 PICKER=wool
 Merge note: main is now c8d53fa; git merge-tree shows conflicts only in main.rs (mod list: picker vs toast / save cfg; add_plugins tuple needs both PickerPlugin and ToastPlugin) and web/drive.js (header comment, edit-count expression: PICKER ? 1 as well as LEVER/SAVE). menu.rs auto-merges.
 Known gaps: picker fills only the selected slot (change slot: Esc, click, 1-9, B); Esc leaves menu until a click; pick-block doesn't jump to an existing slot; blocks without catalog entry pick nothing; tooltip has no edge clamping; no keyboard grid navigation.
 
----
-▸ 2026-11-02T02:52:54Z [herd-memcraft]
+#### 2026-11-02T02:52:54Z
+
+*herd-memcraft*
 
 Landed 0c5f2b8 on main (picker-1's 9b0868b squash-merged via git; main.rs plugin list and drive.js SAVE/PICKER stages resolved by keeping both). Herd re-ran on main: 121 viewer tests, clippy native+wasm clean, web/build.sh OK; drive CAM=119.5,67.5,15,180,35 PICKER=wool: picker-search shows the 16 wools, 'picked Orange Wool for slot 1', 'placed (35, 1) at [119, 65, 11]', middle click 'picked Orange Wool (35:1) from [119, 65, 11]', edits 1/1, pointer lock null while open.
 
----
-▸ 2026-11-02T02:52:54Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T02:52:54Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

@@ -10,11 +10,9 @@ updated: '2026-11-02T08:31:34Z'
 
 Initially, let's just focus on a manual save affordance in the menu (I guess we'll need a menu first!). Presumably we'd need some other serving mechanism to even be _able_ to save anything. We can explore that as well, but also preserve an "ephemeral" mode for read-only deployments with no server.
 
----
-▸ 2026-11-01T01:17:10Z [herd]
-kind: ask
-needs: human
----
+#### 2026-11-01T01:17:10Z
+
+*herd · kind: ask · needs: human*
 
 asked: needs human
 
@@ -25,61 +23,53 @@ Persistence needs a format and a home. Options and leans:
 3. **Server** (yak `mem-a1f7`). A small Rust server in this workspace (e.g. axum) that serves the web build and one world dir, with an endpoint the viewer probes to enable Save; no auth, for local/LAN use at first. Lean: yes, after the writer and native save.
 4. **Native.** Load a world from a directory given on the command line (the embedded world stays the default), and Save writes it back in place, keeping a backup copy. Lean: yes.
 
----
-▸ 2026-11-01T01:50:58Z [Joel Webber]
-kind: answer
-needs: agent
----
+#### 2026-11-01T01:50:58Z
+
+*Joel Webber · kind: answer · needs: agent*
 
 1. As long as you think the format is reasonable and not too much of a pain to work with, then that's good with me.
 2. That's good with me. I'm not worried about the download case -- this read-only mode only needs to exist as a simple fallback.
 3. Yup, that works.
 4. :thumbs-up:
 
----
-▸ 2026-11-01T15:21:36Z [herd]
-kind: pickup
----
+#### 2026-11-01T15:21:36Z
+
+*herd · kind: pickup*
 
 picked up
 
----
-▸ 2026-11-01T15:21:48Z [herd]
+#### 2026-11-01T15:21:48Z
+
+*herd*
 
 Answers recorded (herd): (1) write back into the PE LevelDB world (mem-a86b); (2) read-only Pages build: in-memory edits plus a simple download fallback, IndexedDB not needed; (3) axum server mem-a1f7 after writer and native save; (4) native load from a dir arg, save in place with backup. Unblocks mem-a86b.
 
----
-▸ 2026-11-01T15:33:27Z [delta:herd]
+#### 2026-11-01T15:33:27Z
+
+*delta:herd*
 
 delta:writer-1 on mem-a86b, thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADtzhZIBxBBCaHaBp8ZDPqDsZufUZIx8, base 48ed523.
 
----
-▸ 2026-11-01T15:44:39Z [delta:herd]
+#### 2026-11-01T15:44:39Z
+
+*delta:herd*
 
 delta:menu-1 on mem-d6f2 (game menu), thread ksQQOn_lPggNQrKkBKNvXOzaN5LOADupIZIBxBBCaHaBp8ZDPqDsZufUZIx8, base 48ed523, started Sun Nov  1 15:44:39 UTC 2026.
 
----
-▸ 2026-11-02T01:15:27Z [save-1]
-kind: move
-from: hairy
-to: shaving
-child: mem-5219
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2xo5IBxBD-0Otq811F0oo4eGE3HRbr
----
+#### 2026-11-02T01:15:27Z
+
+*save-1 · kind: move · from: hairy · to: shaving · child: mem-5219 · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD2xo5IBxBD-0Otq811F0oo4eGE3HRbr*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-02T08:31:34Z [herd-memcraft]
+#### 2026-11-02T08:31:34Z
+
+*herd-memcraft*
 
 All children shorn: writer mem-a86b, native save mem-dc6b, browser zip/save feedback mem-5219, world server mem-a1f7. Main 9098f50.
 
----
-▸ 2026-11-02T08:31:34Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T08:31:34Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

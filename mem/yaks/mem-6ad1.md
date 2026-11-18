@@ -13,18 +13,15 @@ depends_on:
 
 Right-clicking a lever flips its data bit (on/off); a button sets its pressed bit and pops back after ~1s (stone 20 ticks, wood 30). No redstone propagation (out of scope, see simulation yak). Needs lever/button shapes in blocks::shape if they still draw as cubes. Interaction takes precedence over placing when the target is interactable (same rule as mem-1457). Verify: unit test for the data-bit flip; headless drive showing the lever changes on click.
 
----
-▸ 2026-11-01T23:40:27Z [lever-1]
-kind: move
-from: hairy
-to: shaving
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD1VZJIBxBD-0Otq811F0oo4eGE3HRbr
----
+#### 2026-11-01T23:40:27Z
+
+*lever-1 · kind: move · from: hairy · to: shaving · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD1VZJIBxBD-0Otq811F0oo4eGE3HRbr*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T23:57:28Z [lever-1]
+#### 2026-11-01T23:57:28Z
+
+*lever-1*
 
 Checkpoint b9d91c7 (local, not pushed).
 
@@ -41,8 +38,9 @@ Next: clippy native+wasm, web build, Playwright drive.
 
 ![lever-after](mem-6ad1/lever-after.png)
 
----
-▸ 2026-11-02T00:41:12Z [lever-1]
+#### 2026-11-02T00:41:12Z
+
+*lever-1*
 
 Summary (lever-1), commit 33eb977 on local main (base a48f18b; not pushed).
 
@@ -66,17 +64,14 @@ Known gaps: the button's timed release is unit-tested but not seen in the browse
 
 Herd: HEAD a48f18b has the tree of 1569374, so the paintings/item-frame changes of 7bb9ab7 are missing from the commit and only uncommitted in my worktree; I committed only my own files/hunks (README and main.rs partially). Check the merge.
 
----
-▸ 2026-11-02T01:14:24Z [herd-memcraft]
+#### 2026-11-02T01:14:24Z
+
+*herd-memcraft*
 
 Landed a354d0d on main (with mem-c910). Delta's worktree merge dropped lever-1's interact.rs change; herd re-applied it from 33eb977. Herd evidence on main: 100 viewer tests, clippy native+wasm clean, web build OK, drive CAM=119.5,66.0,12.5,180,12 LEVER=1 logs 'toggled (69, 3) at [119, 65, 9] ... now (69, 11)' and the screenshot shows the lever flipped. Gap: button pop-back seen in unit tests only.
 
----
-▸ 2026-11-02T01:14:25Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T01:14:25Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

@@ -10,13 +10,15 @@ updated: '2026-10-29T17:19:12Z'
 
 The UI displays "click to look around (Esc releases)", but you actually have to right-drag to look around.
 
----
-▸ 2026-10-29T13:59:54Z [delta:Set up remote yak workflow]
+#### 2026-10-29T13:59:54Z
+
+*delta:Set up remote yak workflow*
 
 moved: hairy -> shaving
 
----
-▸ 2026-10-29T13:59:54Z [delta:Set up remote yak workflow]
+#### 2026-10-29T13:59:54Z
+
+*delta:Set up remote yak workflow*
 
 Cause: Bevy 0.19's `FreeCamera` grabs the cursor only while `mouse_key_cursor_grab` (default `MouseButton::Right`) is held, or after the `M` toggle, and keeps that grab state in private `Local`s. Changing the button would still give hold-to-look, not click-to-look.
 
@@ -28,8 +30,9 @@ Runner note: the cloud runner was reset mid-build (13:10–13:58 UTC) and lost t
 
 ![turned](mem-99d0/turned.png)
 
----
-▸ 2026-10-29T17:19:12Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:19:12Z
+
+*delta:Set up remote yak workflow*
 
 Fixed: left click now locks the mouse and it stays locked; Esc releases it, in the browser and natively.
 
@@ -60,7 +63,8 @@ Not verified: the native build in a real window (no display on the runner).
 
 Commits (local `main`, not pushed): `47076b0` fix, `433f8a0` smoke test, plus `3687d37` (runner setup script; `build.sh`'s `wasm-opt` step now passes the wasm feature flags, 26 MB → 22 MB).
 
----
-▸ 2026-10-29T17:19:12Z [delta:Set up remote yak workflow]
+#### 2026-10-29T17:19:12Z
+
+*delta:Set up remote yak workflow*
 
 moved: shaving -> shorn

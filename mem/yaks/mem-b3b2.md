@@ -15,18 +15,15 @@ Placed blocks take their orientation from the face clicked and the player's faci
 
 Data values follow PE 0.16 (see `mcpe2java/src/blocks.rs` for where PE differs from Java).
 
----
-▸ 2026-11-02T02:53:46Z [orient-1]
-kind: move
-from: hairy
-to: shaving
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD4CsJIBxBD-0Otq811F0oo4eGE3HRbr
----
+#### 2026-11-02T02:53:46Z
+
+*orient-1 · kind: move · from: hairy · to: shaving · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOAD4CsJIBxBD-0Otq811F0oo4eGE3HRbr*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-02T02:59:19Z [orient-1]
+#### 2026-11-02T02:59:19Z
+
+*orient-1*
 
 Checkpoint: new src/orient.rs (pure rule, per-family tests), targeting::placement/hit_height, top slabs drawn (blocks.rs), purpur slab 205 now a slab, Sign catalog entry. Tests still compiling. Not yet run: cargo test/clippy/web build, drive ORIENT stage.
 
@@ -36,8 +33,9 @@ Checkpoint: new src/orient.rs (pure rule, per-family tests), targeting::placemen
 
 ![orient-run8-final](mem-b3b2/orient-run8-final.png)
 
----
-▸ 2026-11-02T04:14:23Z [orient-1]
+#### 2026-11-02T04:14:23Z
+
+*orient-1*
 
 Done, commit 9335ef7 (on top of checkpoint 8d8eb21). Not pushed; herd lands.
 
@@ -49,17 +47,14 @@ Evidence: cargo test -p memcraft-viewer 144 pass; cargo test --workspace, clippy
 
 Gaps / follow-ups: wall torches have right data but blocks.rs still draws them upright; no double-slab merging; pillars (hay/quartz/purpur), pistons, repeaters, rails, anvils not oriented; chests/beds drawn as flat boxes with no visible front; door hinge always left (no neighbour awareness); torches/ladders/signs/doors don't check support block; placing a sign does not open the editor (right-click an existing sign does); middle-click on a wall sign (68) still picks nothing (catalog has only 63).
 
----
-▸ 2026-11-02T04:24:43Z [herd-memcraft]
+#### 2026-11-02T04:24:43Z
+
+*herd-memcraft*
 
 Landed da60fd3 on main (orient-1's 9335ef7 squash-merged, fast-forward, no conflicts). Herd re-ran on main: 144 viewer tests, clippy native+wasm clean, web/build.sh OK; drive CAM=119.5,67.5,15,180,35 ORIENT='[["oak stairs",0,0,1],["oak log",300,0,1]]' placed (53,3) and an upright log (17,0) on the floor, screenshot checked. Gaps per orient-1 (wall torches drawn upright, no double-slab merge, pillars/pistons/rails not oriented, door hinge ignores neighbours, no support checks).
 
----
-▸ 2026-11-02T04:24:44Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T04:24:44Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

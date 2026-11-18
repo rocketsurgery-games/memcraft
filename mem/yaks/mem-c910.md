@@ -23,10 +23,9 @@ Signs keep their four lines in the `Sign` block entity (`Text1`..`Text4`), which
 
 Screenshot of the sample world's "waterfall" sign (mcpe2java's test finds 24 signs); edit one and screenshot.
 
----
-▸ 2026-11-01T03:40:06Z [herd]
-kind: claim
----
+#### 2026-11-01T03:40:06Z
+
+*herd · kind: claim*
 
 Claim (herd) for worker `sign-1`.
 
@@ -45,22 +44,21 @@ Evidence:
 - `cargo test --workspace`, clippy native and wasm, `sh crates/memcraft-viewer/web/build.sh`.
 - Headless screenshot of the sample world's "waterfall" sign (mcpe2java's test finds 24 signs; get its position from the data), then edit one and screenshot.
 
----
-▸ 2026-11-01T03:40:06Z [herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T03:40:06Z
+
+*herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T15:21:48Z [herd]
+#### 2026-11-01T15:21:48Z
+
+*herd*
 
 Runner was wiped again (~11h ago, found Sun Nov  1 15:21:48 UTC 2026); workers door-1/paint-1/sign-1 show no progress since 03:40Z and their runner checkouts are gone. Treating as dead pending Joel's go-ahead to respawn.
 
----
-▸ 2026-11-01T23:40:22Z [sign-2]
+#### 2026-11-01T23:40:22Z
+
+*sign-2*
 
 Claim (sign-2): taking over from lost sign-1; base a48f18b.
 
@@ -68,8 +66,9 @@ Claim (sign-2): taking over from lost sign-1; base a48f18b.
 - farm: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-c910.md
 - checkout: /home/user/memcraft-5
 
----
-▸ 2026-11-01T23:46:39Z [sign-2]
+#### 2026-11-01T23:46:39Z
+
+*sign-2*
 
 Decision: sign text is a baked glyph texture on a quad in front of the board, from a small built-in 5x8 ASCII bitmap font (`font.rs`), one entity per sign with text.
 
@@ -88,11 +87,9 @@ Decision: a block entity is dropped when its cell's block id changes (`WorldMap:
 
 Heads-up for the herd: in this checkout `git status` shows `entities.rs`, `item_icons.rs`, `assets/paintings/`, the new textures, and the edits to `main.rs`/`mesh.rs`/`build.rs`/`mcpe-world/src/lib.rs` as uncommitted/untracked on top of a48f18b: the mem-15e6 commits there are empty. My signs code uses `entities::Wall`. I commit only my own files with explicit paths.
 
----
-▸ 2026-11-02T00:07:26Z [sign-2]
-kind: checkpoint
-commit: 7696d35e8aeb23a0d5af15f68f8479a4f31cf31b
----
+#### 2026-11-02T00:07:26Z
+
+*sign-2 · kind: checkpoint · commit: 7696d35e8aeb23a0d5af15f68f8479a4f31cf31b*
 
 Checkpoint: signs.rs/font.rs/sign_editor.rs + world/controls/menu/targeting/main hooks written, 9 sign unit tests pass. Commits 20f31f2 (repair: the paint files a48f18b lacked) and 7696d35 (wip). Next: clippy native/wasm, web build, screenshots.
 
@@ -104,8 +101,9 @@ Checkpoint: signs.rs/font.rs/sign_editor.rs + world/controls/menu/targeting/main
 
 ![sign-edited](mem-c910/sign-edited.png)
 
----
-▸ 2026-11-02T00:39:29Z [sign-2]
+#### 2026-11-02T00:39:29Z
+
+*sign-2*
 
 Summary (sign-2): signs render their four lines and can be edited. Final commit f3952ab (on 7696d35 and 20f31f2, see below).
 
@@ -136,17 +134,14 @@ Known gaps:
 - Not tested natively (no display here): the editor in a native window, and Done/Cancel/line buttons by mouse (unit-tested only through keys).
 - Repo state: a48f18b's mem-15e6 commits were empty; commit 20f31f2 adds the files they should have had (entities.rs, item_icons.rs, paintings, textures, build.rs...). Drop it if the herd has its own fix. `edit_blocks` needs `#[allow(clippy::too_many_arguments)]` now (8 params).
 
----
-▸ 2026-11-02T01:14:24Z [herd-memcraft]
+#### 2026-11-02T01:14:24Z
+
+*herd-memcraft*
 
 Landed a354d0d on main together with mem-6ad1 (herd merge). Herd re-ran on main: cargo test --workspace (100 viewer tests), clippy native+wasm clean, web/build.sh OK; browser drive logs 'drew the text of 24 of 24 signs'. Merge decisions: sign-2's ?view= replaced by lever-1's ?cam= (same convention); drive.js lost sign-2's VIEW/ACTIONS typing stage, so the editor screenshots are not reproducible from main yet (follow-up). set_block_entity now also marks the column edited so native save writes sign text.
 
----
-▸ 2026-11-02T01:14:25Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-02T01:14:25Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn

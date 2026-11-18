@@ -11,8 +11,9 @@ depends_on:
 - mem-0f2a
 ---
 
----
-▸ 2026-10-29T01:59:03Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T01:59:03Z
+
+*delta:Start investigation for yak mem-0908*
 
 moved: hairy -> shaving
 
@@ -24,8 +25,9 @@ moved: hairy -> shaving
 
 [mcraft-drive](mem-ef1e/mcraft-drive.js)
 
----
-▸ 2026-10-29T02:33:05Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T02:33:05Z
+
+*delta:Start investigation for yak mem-0908*
 
 ## Result: My World is playable in mcraft.fun
 
@@ -47,12 +49,14 @@ Bug found and fixed (`c84f23a`): looking past the world edge threw `ENOENT r.0.-
 - Rendering through SwiftShader ran at about 5–8 FPS. A real GPU will be fine.
 - Not converted: item frames (block → entity), mobs, piston heads, the cauldron.
 
----
-▸ 2026-10-29T02:33:05Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T02:33:05Z
+
+*delta:Start investigation for yak mem-0908*
 
 moved: shaving -> shorn
 
----
-▸ 2026-10-29T02:36:13Z [delta:Start investigation for yak mem-0908]
+#### 2026-10-29T02:36:13Z
+
+*delta:Start investigation for yak mem-0908*
 
 Follow-up `a`-commit on local main: spawn is now the local player's saved feet position, (44, 65, 232). Verified in mcraft.fun: a fresh load spawns at x=44, z=232 (y settles to 61, the ground, in creative). The "Spawn position" gap above is resolved.

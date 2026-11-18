@@ -11,10 +11,9 @@ parent: mem-f4c5
 
 Draw painting and item-frame entities from the world's entity records (mcpe2java decodes them). Paintings: motif -> size + texture region from the painting atlas; item frames: frame quad plus the item's icon. Static only. Verify: count of entities drawn on the bundled world, screenshot of at least one painting.
 
----
-▸ 2026-11-01T03:40:06Z [herd]
-kind: claim
----
+#### 2026-11-01T03:40:06Z
+
+*herd · kind: claim*
 
 Claim (herd) for worker `paint-1`.
 
@@ -33,47 +32,51 @@ Evidence:
 - `cargo test --workspace`, clippy native and wasm, `sh crates/memcraft-viewer/web/build.sh`.
 - Headless screenshot showing at least one painting (find its position from the entity data and point the camera there; drive.js accepts KEYS, or add a URL/debug spawn option only if it already exists).
 
----
-▸ 2026-11-01T03:40:06Z [herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T03:40:06Z
+
+*herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T15:21:48Z [herd]
+#### 2026-11-01T15:21:48Z
+
+*herd*
 
 Runner was wiped again (~11h ago, found Sun Nov  1 15:21:48 UTC 2026); workers door-1/paint-1/sign-1 show no progress since 03:40Z and their runner checkouts are gone. Treating as dead pending Joel's go-ahead to respawn.
 
----
-▸ 2026-11-01T15:33:28Z [delta:paint-2]
+#### 2026-11-01T15:33:28Z
+
+*delta:paint-2*
 
 Worker paint-2 start: Sun Nov  1 15:33:28 UTC 2026. yaks path: /home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-15e6.md. Base main 48ed523.
 
----
-▸ 2026-11-01T15:44:07Z [delta:paint-2]
+#### 2026-11-01T15:44:07Z
+
+*delta:paint-2*
 
 Progress ($(date -u) approx): bundled world has 157 paintings (44 with plain id 83 plus 113 whose id has flag bits above the low byte, 4194387) and 9 item frames (block entity ItemFrame + block 199), holding armour boots and horse armour. Painting Pos is the slab centre, Direction 0..3 = +z,-x,-z,+x facing. Wrote src/entities.rs (decode, meshes, spawn system), build.rs embeds assets/paintings atlas, 28 PP textures added to assets/textures. Now compiling/testing.
 
----
-▸ 2026-11-01T16:18:26Z [delta:paint-2]
+#### 2026-11-01T16:18:26Z
+
+*delta:paint-2*
 
 Progress: entities.rs done; `cargo test --workspace` all ok (incl. 2 new entities tests: 157 paintings + 9 item frames decoded on the bundled world, every painting's wall cells are non-air and its front cells are not opaque cubes, every frame has a block behind it, winding/orientation test); clippy native -D warnings clean; clippy wasm -D warnings clean. web/build.sh running; then headless screenshot.
 
----
-▸ 2026-11-01T22:09:39Z [herd-memcraft]
+#### 2026-11-01T22:09:39Z
+
+*herd-memcraft*
 
 paint-2's worktree is unrecoverable (runner wiped; merge_worktrees: version does not reach its origin). Respawning as paint-3 from main 0a53ca6. paint-2 had reached: entities.rs, assets/paintings/, item textures, 157 paintings + 9 item frames drawn.
 
----
-▸ 2026-11-01T22:10:40Z [paint-3]
+#### 2026-11-01T22:10:40Z
+
+*paint-3*
 
 paint-3 start: Sun Nov  1 22:10:40 UTC 2026. Checkout /home/user/memcraft-2, base main 0a53ca6. Rebuilding paint-2's work (lost).
 
----
-▸ 2026-11-01T22:30:29Z [paint-3]
+#### 2026-11-01T22:30:29Z
+
+*paint-3*
 
 Progress: rebuilt entities.rs, item_icons.rs, build.rs painting embed, PP painting+item textures (+sources/attribution/README). cargo test --workspace passes (157 paintings, 9 frames, 8 with icon). Checkpoint commit local. Now clippy + web build + Playwright.
 
@@ -81,8 +84,9 @@ Progress: rebuilt entities.rs, item_icons.rs, build.rs painting embed, PP painti
 
 ![item-frames](mem-15e6/item-frames.png)
 
----
-▸ 2026-11-01T23:32:22Z [paint-3]
+#### 2026-11-01T23:32:22Z
+
+*paint-3*
 
 Done, committed locally as 7bb9ab7 (one commit on main over 0a53ca6; not pushed, not shorn).
 
@@ -100,22 +104,20 @@ Done, committed locally as 7bb9ab7 (one commit on main over 0a53ca6; not pushed,
 
 **Known gaps**: static only (no interaction/targeting/break); paintings are a front quad only (no rim/back); item rotation, enchant glint, damage variants other than dye and items without a Pixel Perfection icon are not drawn; shading uses the same `light` heuristic as blocks.
 
----
-▸ 2026-11-01T23:39:27Z [herd-memcraft]
+#### 2026-11-01T23:39:27Z
+
+*herd-memcraft*
 
 Landed a48f18b on main (paint-3's 7bb9ab7 merged over the menu; conflicts in main.rs mod list and README resolved by keeping both). Herd re-ran on main: cargo test --workspace (72 viewer tests), clippy native+wasm clean, web/build.sh OK. Browser count/screenshots from paint-3 (157 paintings, 9 frames) not re-run by herd. Gaps: no painting rims/backs, frames/paintings not targetable, item rotation/glint, missing icons.
 
----
-▸ 2026-11-01T23:39:27Z [herd-memcraft]
-kind: move
-from: shaving
-to: shorn
-thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG
----
+#### 2026-11-01T23:39:27Z
+
+*herd-memcraft · kind: move · from: shaving · to: shorn · thread: ksQQOn_lPggNQrKkBKNvXOzaN5LOADYRe5IBxBCA0aLJyrhJPreUvVwLftHG*
 
 moved: shaving -> shorn
 
----
-▸ 2026-11-02T01:14:24Z [herd-memcraft]
+#### 2026-11-02T01:14:24Z
+
+*herd-memcraft*
 
 History note: a48f18b landed as an empty commit (staging slip); the paintings files are in 3c0db4d (labelled mem-dc6b). main's tree is complete; not rewriting pushed history.

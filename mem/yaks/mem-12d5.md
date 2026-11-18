@@ -22,17 +22,15 @@ Prerequisite for interactions: today doors are drawn as full cubes, stairs and s
 - Unit tests: box lists for a closed/open door and a stairs block; a walk test through an open door.
 - drive.js screenshots of a door, fence and stairs in the sample world, before and after.
 
----
-▸ 2026-11-01T01:59:30Z [herd]
-kind: move
-from: hairy
-to: shaving
----
+#### 2026-11-01T01:59:30Z
+
+*herd · kind: move · from: hairy · to: shaving*
 
 moved: hairy -> shaving
 
----
-▸ 2026-11-01T01:59:30Z [herd]
+#### 2026-11-01T01:59:30Z
+
+*herd*
 
 Claim: worker `shape-1` (Delta subthread), base `8fc3164`.
 
@@ -41,15 +39,17 @@ Claim: worker `shape-1` (Delta subthread), base `8fc3164`.
 - Evidence: unit tests named in the yak, existing physics tests still pass, drive.js screenshots of a door, fence and stairs before/after, quad count and wasm size before/after.
 - Judge: yakherd at landing.
 
----
-▸ 2026-11-01T02:00:25Z [shape-1]
+#### 2026-11-01T02:00:25Z
+
+*shape-1*
 
 Started 2026-11-01T02:00:21Z (`date -u`).
 
 `yaks path mem-12d5`: `/home/user/.local/share/yaks/farms/memcraft/.yaks/mem/yaks/mem-12d5.md`. Worktree `/home/user/memcraft-3`, base `8fc3164`.
 
----
-▸ 2026-11-01T02:24:56Z [shape-1]
+#### 2026-11-01T02:24:56Z
+
+*shape-1*
 
 Progress (02:55Z): baseline wasm built at base `8fc3164` (copy kept for before-screenshots): `memcraft-viewer_bg.wasm` = 22580838 bytes. Implemented in the working tree: `Shape::Boxes` + `blocks::model(id, data, near)` (visual and collision box lists in 1/16ths, neighbour-aware), box meshing in `mesh.rs`, `Solids` colliding with the boxes. Unit tests written, waiting for the native dev build of bevy to run them.
 
@@ -65,8 +65,9 @@ Decision: the atlas has no door, sign, lever, button or fence-gate textures and 
 
 Decision: boxes in a block that touch (fence post/rails, pane post/arms, stair parts) are built non-overlapping and a face lying flat against a covering opposite face of a sibling box is skipped; a block-edge face is skipped only against an opaque full cube (as the brief says), so the two halves of a door both draw their touching faces.
 
----
-▸ 2026-11-01T02:46:21Z [shape-1]
+#### 2026-11-01T02:46:21Z
+
+*shape-1*
 
 Correction: the previous progress note's "02:55Z" is wrong; real time was about 02:35Z (`date -u`).
 
@@ -82,40 +83,32 @@ Decision: `lands_on_the_real_terrain_everywhere` now measures the ground height 
 
 ![after-stairs](mem-12d5/after-stairs.png)
 
----
-▸ 2026-11-01T03:05:29Z [shape-1]
+#### 2026-11-01T03:05:29Z
+
+*shape-1*
 
 Final checks 03:05Z: cargo test -p memcraft-viewer -> 'test result: ok. 41 passed; 0 failed' (TEST-EXIT 0); cargo clippy -p memcraft-viewer --all-targets -- -D warnings -> clean (exit 0); wasm clippy exit 0, web/build.sh exit 0. Quads 332,961 -> 366,856 (+33,895, half-slab/cube-ish blocks now boxes); wasm 22,580,838 -> 22,596,531 B (+15,693). Screenshots attached: before-stairs/after-stairs (same camera; nether-brick stairs now stair-shaped). Door/fence close-ups NOT captured: headless SwiftShader flight is frame-time dependent and my 2nd attempt ended under the terrain; doors/stairs verified by sample-world tests instead (39/39 doors axis match wall). Follow-ups: door/sign/lever textures in atlas (planks fallback now); pane edge texture; door halves' touching faces not culled; stairs don't connect fences; Partial could become Boxes.
 
----
-▸ 2026-11-01T03:05:29Z [shape-1]
-kind: move
-from: shaving
-to: shorn
----
+#### 2026-11-01T03:05:29Z
+
+*shape-1 · kind: move · from: shaving · to: shorn*
 
 moved: shaving -> shorn
 
----
-▸ 2026-11-01T03:05:32Z [shape-1]
-kind: checkpoint
-branch: wip/shape-1
-commit: 1e4501ac79f19aa4eec5b6d9ae99a64d431eb60b
----
+#### 2026-11-01T03:05:32Z
+
+*shape-1 · kind: checkpoint · branch: wip/shape-1 · commit: 1e4501ac79f19aa4eec5b6d9ae99a64d431eb60b*
 
 checkpoint
 
----
-▸ 2026-11-01T03:05:58Z [herd]
-kind: landed
-commit: 5de1f7d32103d705749cc032390923ed8dc32ea6
-source: 1e4501ac79f19aa4eec5b6d9ae99a64d431eb60b
-branch: main
----
+#### 2026-11-01T03:05:58Z
+
+*herd · kind: landed · commit: 5de1f7d32103d705749cc032390923ed8dc32ea6 · source: 1e4501ac79f19aa4eec5b6d9ae99a64d431eb60b · branch: main*
 
 landed: 5de1f7d mem-12d5: box shapes for doors, trapdoors, gates, fences, panes, stairs, signs; physics collides with them
 
----
-▸ 2026-11-01T03:39:06Z [herd]
+#### 2026-11-01T03:39:06Z
+
+*herd*
 
 Re-verified on main bd22126 (herd, Sun Nov  1 03:39:06 UTC 2026): workspace tests pass (viewer 55), clippy native+wasm clean, web build OK (wasm 22,678,402 B), drive.js pointer lock OK, 366,856 quads; drive-edit PITCH=0 KEYS=w1500 -> broke (247,0) at [44,66,225], placed at [44,66,225] and [44,66,226], re-lock click 0 edits. Pushed to origin/main.
